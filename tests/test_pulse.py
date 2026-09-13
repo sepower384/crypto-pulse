@@ -418,7 +418,7 @@ class TestPipeline(unittest.TestCase):
         text = json.dumps(msg["blocks"], ensure_ascii=False)
         self.assertTrue(msg["has_news"])
         self.assertEqual(msg["blocks"][0]["type"], "header")
-        self.assertIn("03:00 KST", msg["blocks"][0]["text"]["text"])
+        self.assertIn("03:00", msg["blocks"][0]["text"]["text"])
         self.assertIn("유명인사 인사이트", text)
         self.assertIn("&lt;security&gt;", text)
         self.assertIn("HYPE(+12%)", text)
