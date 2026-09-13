@@ -7,7 +7,7 @@ name: crypto-pulse
 
 on:
   schedule:
-    - cron: "23 */2 * * *" # 2시간마다 (정각은 GitHub 혼잡으로 지연이 커서 23분에)
+    - cron: "43 */2 * * *" # 2시간마다 (정각은 GitHub 혼잡으로 지연이 커서 43분에)
   workflow_dispatch:
     inputs:
       force:
