@@ -1,0 +1,67 @@
+# 크립토 펄스 — PC 가 꺼져 있어도 깃허브가 대신 돌린다.
+#
+# 상태(data/state.json: 보낸 글 · 언급량 히스토리 · 직전 트렌딩)는 실행 후 커밋해서 다음 회차로 넘긴다.
+# 매 회차 커밋이 생기므로 "60일 비활성 → 예약 실행 자동중지"도 같이 막힌다.
+# 필요한 Secrets: SLACK_WEBHOOK_URL (필수) · GEMINI_API_KEY (선택, AI 요약) · X_COOKIES (선택, X 수집)
+name: crypto-pulse
+
+on:
+  schedule:
+    - cron: "23 */2 * * *" # 2시간마다 (정각은 GitHub 혼잡으로 지연이 커서 23분에)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "새 소식 없어도 전송"
+        type: boolean
+        default: false
+
+concurrency:
+  group: crypto-pulse
+  cancel-in-progress: false
+
+jobs:
+  pulse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      X_COOKIES: ${{ secrets.X_COOKIES }} # step 의 if 에서 보이려면 job 단위여야 한다
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # X 는 쿠키가 있을 때만 수집하므로 그때만 브라우저를 깐다
+      - name: Playwright 설치 (X_COOKIES 있을 때만)
+        if: env.X_COOKIES != ''
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: 수집 · 분석 · 슬랙 전송
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PYTHONUTF8: "1"
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::error::저장소 Secrets 에 SLACK_WEBHOOK_URL 이 없다"
+            exit 1
+          fi
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            python -m pulse.main --force
+          else
+            python -m pulse.main
+          fi
+
+      # 전송이 실패해도 트렌드 히스토리는 남긴다
+      - name: 상태 커밋
+        if: always()
+        run: |
+          git config user.name "crypto-pulse-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/state.json
+          git diff --cached --quiet || { git commit -m "chore: state $(date -u +%FT%TZ)" && git pull --rebase && git push; }

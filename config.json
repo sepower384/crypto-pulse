@@ -1,0 +1,60 @@
+{
+  "timezone_offset_hours": 9,
+
+  "x": {
+    "comment": "X(트위터)는 로그인 쿠키(X_COOKIES) 있을 때만 수집. require_crypto=true 인 계정은 크립토 단어가 들어간 글만 통과",
+    "max_age_hours": 30,
+    "per_handle_limit": 3,
+    "handles": [
+      {"handle": "VitalikButerin", "name": "Vitalik Buterin"},
+      {"handle": "saylor", "name": "Michael Saylor"},
+      {"handle": "cz_binance", "name": "CZ"},
+      {"handle": "brian_armstrong", "name": "Brian Armstrong"},
+      {"handle": "CryptoHayes", "name": "Arthur Hayes"},
+      {"handle": "APompliano", "name": "Anthony Pompliano"},
+      {"handle": "RaoulGMI", "name": "Raoul Pal"},
+      {"handle": "novogratz", "name": "Mike Novogratz"},
+      {"handle": "CathieDWood", "name": "Cathie Wood", "require_crypto": true},
+      {"handle": "balajis", "name": "Balaji", "require_crypto": true},
+      {"handle": "aeyakovenko", "name": "Anatoly Yakovenko"},
+      {"handle": "haydenzadams", "name": "Hayden Adams"},
+      {"handle": "hosseeb", "name": "Haseeb Qureshi"},
+      {"handle": "zachxbt", "name": "ZachXBT"},
+      {"handle": "lookonchain", "name": "Lookonchain"},
+      {"handle": "WuBlockchain", "name": "Wu Blockchain"},
+      {"handle": "PeterSchiff", "name": "Peter Schiff", "require_crypto": true},
+      {"handle": "elonmusk", "name": "Elon Musk", "require_crypto": true}
+    ]
+  },
+
+  "reddit": {
+    "subreddits": ["CryptoCurrency", "Bitcoin", "ethereum", "CryptoMarkets", "solana", "altcoin", "defi", "ethtrader"],
+    "top_limit": 50,
+    "show_top": 5
+  },
+
+  "bluesky": {
+    "handles": [
+      {"handle": "vitalik.ca", "name": "Vitalik Buterin"}
+    ]
+  },
+
+  "blogs": [
+    {"url": "https://vitalik.eth.limo/feed.xml", "name": "Vitalik 블로그"},
+    {"url": "https://cryptohayes.medium.com/feed", "name": "Arthur Hayes 에세이"},
+    {"url": "https://www.lynalden.com/feed/", "name": "Lyn Alden"}
+  ],
+
+  "trends": {
+    "history_runs": 36,
+    "window_hours": 24,
+    "min_mentions": 3,
+    "surge_ratio": 2.0,
+    "max_items": 6
+  },
+
+  "insights": {
+    "max_items": 8,
+    "blog_max_age_hours": 240
+  }
+}

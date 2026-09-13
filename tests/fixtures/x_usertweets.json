@@ -1,0 +1,46 @@
+{"data": {"user": {"result": {"__typename": "User", "timeline": {"timeline": {"instructions": [
+  {"type": "TimelinePinEntry", "entry": {"entryId": "tweet-100", "content": {"itemContent": {"tweet_results": {"result": {
+    "__typename": "Tweet", "rest_id": "100",
+    "core": {"user_results": {"result": {"core": {"screen_name": "saylor"}, "legacy": {}}}},
+    "legacy": {"id_str": "100", "full_text": "Pinned: Bitcoin is hope.", "created_at": "Mon Jan 01 00:00:00 +0000 2024", "favorite_count": 90000, "retweet_count": 9000}
+  }}}}}},
+  {"type": "TimelineAddEntries", "entries": [
+    {"entryId": "tweet-201", "content": {"itemContent": {"tweet_results": {"result": {
+      "__typename": "Tweet", "rest_id": "201",
+      "core": {"user_results": {"result": {"core": {"screen_name": "saylor"}, "legacy": {}}}},
+      "legacy": {"id_str": "201", "full_text": "Strategy has acquired 1,000 $BTC for $110M. https://t.co/x", "created_at": "Sat Sep 12 13:00:00 +0000 2026", "favorite_count": 15300, "retweet_count": 2100},
+      "views": {"count": "1200345"}
+    }}}}},
+    {"entryId": "tweet-202", "content": {"itemContent": {"tweet_results": {"result": {
+      "__typename": "TweetWithVisibilityResults",
+      "tweet": {
+        "rest_id": "202",
+        "core": {"user_results": {"result": {"legacy": {"screen_name": "Saylor"}}}},
+        "legacy": {"id_str": "202", "full_text": "short version…", "created_at": "Sat Sep 12 15:30:00 +0000 2026", "favorite_count": 800, "retweet_count": 50},
+        "note_tweet": {"note_tweet_results": {"result": {"text": "Long form note: why bitcoin treasury companies outperform in a rate cut cycle and what it means for ETH."}}},
+        "quoted_status_result": {"result": {"__typename": "Tweet", "rest_id": "900",
+          "core": {"user_results": {"result": {"core": {"screen_name": "WatcherGuru"}}}},
+          "legacy": {"id_str": "900", "full_text": "JUST IN: Fed cuts rates by 25bps", "created_at": "Sat Sep 12 15:00:00 +0000 2026", "favorite_count": 1, "retweet_count": 1}}}
+      }
+    }}}}},
+    {"entryId": "tweet-203", "content": {"itemContent": {"tweet_results": {"result": {
+      "__typename": "Tweet", "rest_id": "203",
+      "core": {"user_results": {"result": {"core": {"screen_name": "saylor"}}}},
+      "legacy": {"id_str": "203", "full_text": "RT @someone: retweeted thing", "created_at": "Sat Sep 12 16:00:00 +0000 2026", "favorite_count": 0, "retweet_count": 10,
+        "retweeted_status_result": {"result": {"rest_id": "901"}}}
+    }}}}},
+    {"entryId": "profile-conversation-1", "content": {"items": [
+      {"item": {"itemContent": {"tweet_results": {"result": {
+        "__typename": "Tweet", "rest_id": "300",
+        "core": {"user_results": {"result": {"core": {"screen_name": "randomguy"}}}},
+        "legacy": {"id_str": "300", "full_text": "question to saylor", "created_at": "Sat Sep 12 10:00:00 +0000 2026", "favorite_count": 3, "retweet_count": 0}
+      }}}}},
+      {"item": {"itemContent": {"tweet_results": {"result": {
+        "__typename": "Tweet", "rest_id": "301",
+        "core": {"user_results": {"result": {"core": {"screen_name": "saylor"}}}},
+        "legacy": {"id_str": "301", "full_text": "@randomguy yes", "created_at": "Sat Sep 12 10:05:00 +0000 2026", "favorite_count": 40, "retweet_count": 0,
+          "in_reply_to_status_id_str": "300", "in_reply_to_screen_name": "randomguy"}
+      }}}}}
+    ]}}
+  ]}
+]}}}}}}
