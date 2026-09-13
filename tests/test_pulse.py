@@ -13,7 +13,7 @@ FIX = os.path.join(ROOT, "tests", "fixtures")
 
 from pulse import insights, main, slack, state, trends  # noqa: E402
 from pulse.model import Post, SourceResult  # noqa: E402
-from pulse.sources import blogs, bluesky, coingecko, reddit, x  # noqa: E402
+from pulse.sources import blogs, bluesky, coingecko, farcaster, reddit, telegram, x  # noqa: E402
 
 NOW = datetime(2026, 9, 12, 18, 0, tzinfo=timezone.utc)
 
@@ -141,6 +141,48 @@ class TestOtherSources(unittest.TestCase):
         a = blogs.parse(atom, "A")[0]
         self.assertEqual(a.url, "https://a.com/2")
 
+    def test_telegram_real_page(self):
+        ps = telegram.parse(fixture("telegram_channel.html"), "wublockchainenglish", "Wu Blockchain")
+        self.assertEqual(len(ps), 4)
+        p = ps[0]
+        self.assertEqual(p.url, "https://t.me/wublockchainenglish/26000")
+        self.assertEqual(p.key, "telegram:wublockchainenglish/26000")
+        self.assertEqual(p.created.tzinfo, timezone.utc)
+        self.assertGreater(p.extra["views"], 0)
+        for q in ps:
+            self.assertNotIn("<", q.text)
+
+    def test_telegram_skips_media_only_and_reply_quote(self):
+        page = ('<div class="tgme_widget_message_wrap"><div data-post="ch/1">'
+                '<div class="tgme_widget_message_text js-message_reply_text">quoted</div>'
+                '<div class="tgme_widget_message_text js-message_text" dir="auto">$BTC &#036;80K<br/>next</div>'
+                '<span class="tgme_widget_message_views">2.5K</span><time datetime="2026-09-12T00:00:00+00:00"></time>'
+                '</div></div><div class="tgme_widget_message_wrap"><div data-post="ch/2">photo only</div></div>')
+        ps = telegram.parse(page, "ch", "Ch")
+        self.assertEqual([p.text for p in ps], ["$BTC $80K\nnext"])
+        self.assertEqual(ps[0].extra["views"], 2500)
+        self.assertEqual(telegram.parse_views("1.2M"), 1_200_000)
+        self.assertEqual(telegram.parse_views("987"), 987)
+
+    def test_farcaster_real_payload(self):
+        ps = farcaster.parse(json.loads(fixture("farcaster_casts.json")), "vitalik.eth", "Vitalik")
+        self.assertTrue(ps)
+        for p in ps:
+            self.assertTrue(p.url.startswith("https://farcaster.xyz/vitalik.eth/0x"))
+            self.assertIsNotNone(p.created)
+            self.assertGreater(p.likes, 0)
+        self.assertLess(len(ps), 4)  # 답글은 빠진다
+
+    def test_farcaster_skips_replies_and_others(self):
+        data = {"result": {"casts": [
+            {"hash": "0xaaa", "text": "mine", "timestamp": 1788968354000, "author": {"username": "v"},
+             "reactions": {"count": 3}, "recasts": {"count": 1}},
+            {"hash": "0xbbb", "text": "reply", "parentHash": "0x1", "author": {"username": "v"}},
+            {"hash": "0xccc", "text": "recast of other", "author": {"username": "someone"}},
+        ]}}
+        ps = farcaster.parse(data, "v", "V")
+        self.assertEqual([(p.text, p.likes, p.reposts) for p in ps], [("mine", 3, 1)])
+
     def test_coingecko_parse(self):
         data = {"coins": [{"item": {"symbol": "hype", "name": "Hyperliquid", "id": "hyperliquid",
                                     "market_cap_rank": 12, "data": {"price_change_percentage_24h": {"usd": 7.456}}}},
@@ -259,11 +301,45 @@ class TestInsights(unittest.TestCase):
         dup = [post(pid="x1", text="Same text on both networks about ETH"),
                post(source="bluesky", pid="b1", handle="vitalik.ca", text="Same text on both networks about ETH")]
         self.assertEqual(len(insights.select(dup, {}, c, NOW)), 1)
+        full = "A note on recursive STARK mempools (EIP-8288) This is an EIP that I am hoping we get into I-star"
+        cut = post(source="bluesky", pid="b2", handle="vitalik.ca", author="Vitalik", likes=9,
+                   text="A note on recursive STARK mempools (EIP-8288) This is an EI... Read more: longer.blue")
+        fc = post(source="farcaster", pid="0xf", handle="vitalik.eth", author="Vitalik", text=full, likes=75)
+        self.assertEqual([p.id for p in insights.select([cut, fc], {}, c, NOW)], ["0xf"])
 
     def test_score_orders_by_engagement(self):
         hi = post(pid="h", text="Bitcoin", likes=100000)
         lo = post(pid="l", text="Bitcoin", likes=10)
         self.assertGreater(insights.score(hi, NOW), insights.score(lo, NOW))
+
+    def test_farcaster_counts_as_insight(self):
+        c = cfg()
+        text = "New EIP for quantum-safe ETH signatures"
+        fc = post(source="farcaster", pid="0xabc", handle="vitalik.eth", text=text, hours=60)
+        xp = post(pid="x9", handle="saylor", text="Bitcoin is digital capital, always has been", hours=60)
+        stale = post(source="bluesky", pid="b9", handle="vitalik.ca", text=text + " again", hours=120)
+        self.assertEqual([q.id for q in insights.select([fc, xp, stale], {}, c, NOW)], ["0xabc"])
+
+    def test_channel_news(self):
+        c = cfg()
+        tg = lambda pid, text, views, hours=1, ch="lookonchainchannel", **extra: post(  # noqa: E731
+            source="telegram", pid=pid, handle=ch, text=text, hours=hours, likes=0, extra={"views": views, **extra})
+        ps = [
+            tg("a/1", "Whale bought 5,000 $ETH ($20M) on Binance", 30000),
+            tg("a/2", "A fresh wallet withdrew 900 BTC from OKX", 20000),
+            tg("a/3", "Smart money dumped $PEPE again", 10000),          # 채널당 2개 제한
+            tg("a/4", "Old whale news about SOL", 90000, hours=20),     # 너무 오래됨
+            tg("w/1", "Breaking: US jobs report beats estimates", 50000, ch="WatcherGuru", require_crypto=True),
+            tg("w/2", "JUST IN: Bitcoin ETF sees $1B inflow", 40000, ch="WatcherGuru", require_crypto=True),
+            tg("u/1", "Strategy acquired 1,000 $BTC. Bitcoin treasury season.", 40000, ch="wublockchainenglish"),
+            post(source="x", pid="x1", text="reddit? no, X post about ETH"),
+        ]
+        insight = [post(pid="201", text="Strategy acquired 1,000 $BTC. Bitcoin treasury season.")]
+        ids = [p.id for p in insights.channel_news(ps, {"telegram:a/9": "t"}, c, NOW, exclude=insight)]
+        self.assertEqual(set(ids), {"a/1", "a/2", "w/2"})
+        self.assertEqual(ids, ["w/2", "a/1", "a/2"])  # 조회수·코인언급 순
+        self.assertEqual(insights.channel_news(ps, {f"telegram:{i}": "t" for i in ids}, c, NOW,
+                                               exclude=insight)[0].id, "a/3")
 
     def test_reddit_top_order_and_seen(self):
         ps = [post(source="reddit", pid=str(i), rank=r) for i, r in enumerate([3, 1, 2])]
@@ -316,6 +392,12 @@ class TestPipeline(unittest.TestCase):
             SourceResult("reddit", True, [post(source="reddit", pid=f"r{i}", rank=i + 1, text=f"Bitcoin thread {i}",
                                                extra={"title": f"Bitcoin thread {i}"}) for i in range(8)], "8건"),
             SourceResult("bluesky", True, [], "0건"),
+            SourceResult("farcaster", True, [post(source="farcaster", pid="0xfc1", handle="jessepollak",
+                                                  text="Base is shipping onchain summer again for USDC")], "1/1"),
+            SourceResult("telegram", True, [post(source="telegram", pid="lookonchainchannel/7",
+                                                 handle="lookonchainchannel", author="Lookonchain", likes=0,
+                                                 text="Whale deposited 3,000 $ETH to Binance", extra={"views": 12000})],
+                         "1/1채널"),
             SourceResult("blogs", False, [], "실패: URLError"),
             SourceResult("coingecko", True, [], "2종", extra={"trending": [
                 {"symbol": "BTC", "change_24h": 1.0}, {"symbol": "HYPE", "change_24h": 12.3}]}),
@@ -341,6 +423,10 @@ class TestPipeline(unittest.TestCase):
         self.assertIn("&lt;security&gt;", text)
         self.assertIn("HYPE(+12%)", text)
         self.assertIn("⚠️ 블로그", text)
+        self.assertIn("🟪 *jessepollak*", text)
+        self.assertIn("온체인·속보", text)
+        self.assertIn("👁 12.0K", text)
+        self.assertEqual([p.id for p in msg["news"]], ["lookonchainchannel/7"])
         self.assertEqual(len(msg["reddit"]), 5)
         self.assertLessEqual(len(msg["blocks"]), 50)
 
@@ -364,6 +450,7 @@ class TestPipeline(unittest.TestCase):
                 st = _load(path)
                 self.assertIn("x:201", st["seen"])
                 self.assertIn("reddit:r0", st["seen"])
+                self.assertIn("telegram:lookonchainchannel/7", st["seen"])
                 self.assertEqual(st["trending_prev"], ["BTC", "HYPE"])
 
 

@@ -105,19 +105,24 @@ def count(posts):
         for ent in extract(p.text):
             c[ent] += 1
             # 예시 글: 가장 인기 있는(레딧은 순위 높은, X는 좋아요 많은) 글
-            score = p.likes if p.source != "reddit" else 10000 - p.rank
+            if p.source == "reddit":
+                score = 10000 - p.rank
+            elif p.source == "telegram":
+                score = p.extra.get("views", 0) // 20  # 조회수는 좋아요보다 한 자릿수 이상 크다
+            else:
+                score = p.likes
             if ent not in examples or score > examples[ent][0]:
                 examples[ent] = (score, p)
     return c, {k: v[1] for k, v in examples.items()}
 
 
 def window(posts, cfg, now=None):
-    """트렌드 집계 대상: 최근 window_hours 안의 X/레딧/블루스카이 글.
+    """트렌드 집계 대상: 최근 window_hours 안의 X/레딧/블루스카이/파캐스터/텔레그램 글.
     블로그 RSS 는 수년치 과거글이 딸려와서 언급량을 오염시키므로 제외한다."""
     hours = cfg["trends"].get("window_hours", 24)
     out = []
     for p in posts:
-        if p.source not in ("x", "reddit", "bluesky"):
+        if p.source not in ("x", "reddit", "bluesky", "farcaster", "telegram"):
             continue
         age = p.age_hours(now)
         if age is not None and age <= hours:

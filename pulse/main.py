@@ -12,11 +12,12 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 from . import insights, slack, state, trends
-from .sources import blogs, bluesky, coingecko, reddit, x
+from .sources import blogs, bluesky, coingecko, farcaster, reddit, telegram, x
 from .translate import summarize, to_korean
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SOURCE_LABEL = {"x": "X", "reddit": "Reddit", "bluesky": "Bluesky", "blogs": "블로그", "coingecko": "CoinGecko"}
+SOURCE_LABEL = {"x": "X", "reddit": "Reddit", "bluesky": "Bluesky", "farcaster": "Farcaster",
+                "telegram": "Telegram", "blogs": "블로그", "coingecko": "CoinGecko"}
 
 
 def load_config(path=None):
@@ -38,7 +39,8 @@ def load_dotenv(path=None):
 
 def collect_all(cfg):
     # X(Playwright)는 오래 걸리니 나머지와 병렬
-    fns = [x.collect, reddit.collect, bluesky.collect, blogs.collect, coingecko.collect]
+    fns = [x.collect, reddit.collect, bluesky.collect, farcaster.collect, telegram.collect,
+           blogs.collect, coingecko.collect]
     with ThreadPoolExecutor(max_workers=len(fns)) as ex:
         return list(ex.map(lambda f: f(cfg), fns))
 
@@ -54,13 +56,14 @@ def build_message(cfg, results, st, now):
     trending = by_name["coingecko"].extra.get("trending", [])
     new_trending = trends.trending_changes(trending, st["trending_prev"])
     picks = insights.select(posts, st["seen"], cfg, now)
+    news = insights.channel_news(posts, st["seen"], cfg, now, exclude=picks)
     rtop = insights.reddit_top(posts, st["seen"], cfg)
 
     kst = now + timedelta(hours=cfg.get("timezone_offset_hours", 9))
     blocks = [{"type": "header", "text": {"type": "plain_text", "text": f"🌐 크립토 펄스 · {kst:%m/%d %H:%M} KST"}}]
 
     # AI 요약 (선택)
-    lines = [f"[{p.source}] {p.author}: {p.text[:200]}" for p in picks]
+    lines = [f"[{p.source}] {p.author}: {p.text[:200]}" for p in picks + news]
     lines += [f"[reddit #{p.rank}] {p.extra.get('title', p.text[:150])}" for p in rtop]
     lines += [f"[급상승] {ent_label(s['ent'])} {s['n']}회 (평소 {s['base']})" for s in tr["surges"]]
     summary = summarize(lines)
@@ -98,7 +101,7 @@ def build_message(cfg, results, st, now):
         blocks.append({"type": "divider"})
         ins_lines = []
         for p in picks:
-            icon = {"x": "𝕏", "bluesky": "🦋", "blog": "📝"}[p.source]
+            icon = {"x": "𝕏", "bluesky": "🦋", "farcaster": "🟪", "blog": "📝"}[p.source]
             meta = f" · ❤️ {slack.fmt_num(p.likes)}" if p.likes else ""
             ko = to_korean(p.extra.get("title") if p.source == "blog" else p.text, 450)
             quote = ""
@@ -109,6 +112,17 @@ def build_message(cfg, results, st, now):
                 f"{icon} *{slack.esc(p.author)}*{meta} · {slack.link(p.url, '원문')}\n"
                 f"> {slack.esc(ko).replace(chr(10), chr(10) + '> ')[:600]}{quote}\n")
         blocks += slack.chunked_sections("🗣️ 유명인사 인사이트", ins_lines)
+
+    # 텔레그램 속보·온체인
+    if news:
+        blocks.append({"type": "divider"})
+        n_lines = []
+        for p in news:
+            views = p.extra.get("views", 0)
+            meta = f" · 👁 {slack.fmt_num(views)}" if views else ""
+            ko = slack.esc(to_korean(p.text, 350))[:320].replace("\n", " ")
+            n_lines.append(f"📡 *{slack.esc(p.author)}*{meta} · {slack.link(p.url, '원문')}\n> {ko}\n")
+        blocks += slack.chunked_sections("📡 온체인·속보 (텔레그램)", n_lines)
 
     # 레딧
     if rtop:
@@ -121,9 +135,10 @@ def build_message(cfg, results, st, now):
     status = " | ".join(f"{'✅' if r.ok else '⚠️'} {SOURCE_LABEL.get(r.name, r.name)} {r.note}" for r in results)
     blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text": slack.esc(status)[:2900]}]})
 
-    has_news = bool(picks or rtop or tr["surges"] or new_trending)
-    return {"blocks": blocks, "has_news": has_news, "trends": tr, "picks": picks, "reddit": rtop,
-            "trending": trending, "fallback": f"크립토 펄스 {kst:%m/%d %H:%M} — 인사이트 {len(picks)} · 급상승 {len(tr['surges'])}"}
+    has_news = bool(picks or news or rtop or tr["surges"] or new_trending)
+    return {"blocks": blocks, "has_news": has_news, "trends": tr, "picks": picks, "news": news, "reddit": rtop,
+            "trending": trending,
+            "fallback": f"크립토 펄스 {kst:%m/%d %H:%M} — 인사이트 {len(picks)} · 속보 {len(news)} · 급상승 {len(tr['surges'])}"}
 
 
 def write_outbox(msg, now):
@@ -152,7 +167,7 @@ def run(dry_run=False, force=False, cfg=None, now=None):
 
     for r in results:
         print(f"[{r.name}] ok={r.ok} {r.note}")
-    print(f"인사이트 {len(msg['picks'])} · 레딧 {len(msg['reddit'])} · 급상승 {len(msg['trends']['surges'])} "
+    print(f"인사이트 {len(msg['picks'])} · 속보 {len(msg['news'])} · 레딧 {len(msg['reddit'])} · 급상승 {len(msg['trends']['surges'])} "
           f"· 기준선 {msg['trends']['runs']}회")
 
     if dry_run:
@@ -167,7 +182,7 @@ def run(dry_run=False, force=False, cfg=None, now=None):
 
     # 전송 실패 시 seen 을 올리지 않아 다음 회차에 다시 시도. 트렌드 히스토리는 항상 쌓는다.
     if sent:
-        state.mark_seen(st, msg["picks"] + msg["reddit"], now)
+        state.mark_seen(st, msg["picks"] + msg["news"] + msg["reddit"], now)
     st["mentions"].append({"ts": now.isoformat(), **msg["trends"]["snapshot"]})
     if msg["trending"]:
         st["trending_prev"] = [c["symbol"] for c in msg["trending"]]

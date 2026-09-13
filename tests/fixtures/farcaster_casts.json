@@ -1,0 +1,217 @@
+{
+ "result": {
+  "casts": [
+   {
+    "hash": "0x665e29f13bf5eb4dfc46fdebda3223a2e0e01b81",
+    "threadHash": "0x665e29f13bf5eb4dfc46fdebda3223a2e0e01b81",
+    "author": {
+     "fid": 5650,
+     "displayName": "Vitalik Buterin",
+     "profile": {
+      "bio": {
+       "text": "hullo",
+       "mentions": [],
+       "channelMentions": []
+      },
+      "location": {
+       "placeId": "",
+       "description": ""
+      },
+      "earlyWalletAdopter": true,
+      "accountLevel": "pro",
+      "url": "",
+      "profileToken": {
+       "tokenUri": ""
+      }
+     },
+     "followerCount": 110132,
+     "followingCount": 110,
+     "username": "vitalik.eth",
+     "pfp": {
+      "url": "https://media.firefly.land/lens/126a045e-f7bb-44cc-80b1-2bd63ce9be58.png",
+      "verified": false
+     }
+    },
+    "text": "A note on recursive STARK mempools (EIP-8288) https://eips.ethereum.org/EIPS/eip-8288\n\nThis is an EIP that I am hoping we can get included in I-star (the fork after Hegota) that you can think of as the next step after Frames, that would unlock extreme amounts of power. Particularly:\n\n* Ultra-cheap quantum-safe signatures (SPHINCS-). Much of the cost savings comes from the fact that the signature d",
+    "timestamp": 1788968354000,
+    "replies": {
+     "count": 7
+    },
+    "reactions": {
+     "count": 75
+    },
+    "recasts": {
+     "count": 19,
+     "recasters": []
+    },
+    "viewCount": 1100,
+    "quoteCount": 2,
+    "combinedRecastCount": 21
+   },
+   {
+    "hash": "0x84e0da9e5515d4c09f0d0ea9286cbfbfa24a7e0e",
+    "threadHash": "0x84e0da9e5515d4c09f0d0ea9286cbfbfa24a7e0e",
+    "author": {
+     "fid": 5650,
+     "displayName": "Vitalik Buterin",
+     "profile": {
+      "bio": {
+       "text": "hullo",
+       "mentions": [],
+       "channelMentions": []
+      },
+      "location": {
+       "placeId": "",
+       "description": ""
+      },
+      "earlyWalletAdopter": true,
+      "accountLevel": "pro",
+      "url": "",
+      "profileToken": {
+       "tokenUri": ""
+      }
+     },
+     "followerCount": 110132,
+     "followingCount": 110,
+     "username": "vitalik.eth",
+     "pfp": {
+      "url": "https://media.firefly.land/lens/126a045e-f7bb-44cc-80b1-2bd63ce9be58.png",
+      "verified": false
+     }
+    },
+    "text": "",
+    "timestamp": 1788963284000,
+    "replies": {
+     "count": 5
+    },
+    "reactions": {
+     "count": 52
+    },
+    "recasts": {
+     "count": 11,
+     "recasters": []
+    },
+    "viewCount": 1000,
+    "quoteCount": 1,
+    "combinedRecastCount": 12
+   },
+   {
+    "hash": "0xee3f23786790e580d928313c6038f0ade4a84594",
+    "threadHash": "0xee3f23786790e580d928313c6038f0ade4a84594",
+    "author": {
+     "fid": 5650,
+     "displayName": "Vitalik Buterin",
+     "profile": {
+      "bio": {
+       "text": "hullo",
+       "mentions": [],
+       "channelMentions": []
+      },
+      "location": {
+       "placeId": "",
+       "description": ""
+      },
+      "earlyWalletAdopter": true,
+      "accountLevel": "pro",
+      "url": "",
+      "profileToken": {
+       "tokenUri": ""
+      }
+     },
+     "followerCount": 110132,
+     "followingCount": 110,
+     "username": "vitalik.eth",
+     "pfp": {
+      "url": "https://media.firefly.land/lens/126a045e-f7bb-44cc-80b1-2bd63ce9be58.png",
+      "verified": false
+     }
+    },
+    "text": "Fun though in-retrospect obvious fact: tort and торт share an etymology.",
+    "timestamp": 1788895000000,
+    "replies": {
+     "count": 6
+    },
+    "reactions": {
+     "count": 70
+    },
+    "recasts": {
+     "count": 12,
+     "recasters": []
+    },
+    "viewCount": 1400,
+    "quoteCount": 0,
+    "combinedRecastCount": 12
+   },
+   {
+    "hash": "0xf0fa6a9b24dd12c2104354ca37981045e95656f3",
+    "threadHash": "0x0421efa462b0e43dd916815e305206c08da5e31a",
+    "author": {
+     "fid": 5650,
+     "displayName": "Vitalik Buterin",
+     "profile": {
+      "bio": {
+       "text": "hullo",
+       "mentions": [],
+       "channelMentions": []
+      },
+      "location": {
+       "placeId": "",
+       "description": ""
+      },
+      "earlyWalletAdopter": true,
+      "accountLevel": "pro",
+      "url": "",
+      "profileToken": {
+       "tokenUri": ""
+      }
+     },
+     "followerCount": 110132,
+     "followingCount": 110,
+     "username": "vitalik.eth",
+     "pfp": {
+      "url": "https://media.firefly.land/lens/126a045e-f7bb-44cc-80b1-2bd63ce9be58.png",
+      "verified": false
+     }
+    },
+    "text": "Inventing and getting better at verifying new cryptographic primitives (as opposed to shoehorning everything into hashes and lattices) is underrated.",
+    "timestamp": 1788706106000,
+    "replies": {
+     "count": 1
+    },
+    "reactions": {
+     "count": 0
+    },
+    "recasts": {
+     "count": 0,
+     "recasters": []
+    },
+    "parentHash": "0x933f8310c60eed89cf3473e8c1eaffaaf0ec3a4a",
+    "parentAuthor": {
+     "fid": 1355021,
+     "displayName": "hyzo",
+     "profile": {
+      "bio": {
+       "text": "Study of crypto ecosystem + Ai + innovations + processes in science and our lives",
+       "mentions": [],
+       "channelMentions": []
+      },
+      "location": {
+       "placeId": "",
+       "description": ""
+      },
+      "url": ""
+     },
+     "followerCount": 76,
+     "followingCount": 179,
+     "username": "hyzo",
+     "pfp": {
+      "url": "https://imagedelivery.net/BXluQx4ige9GuW0Ia56BHw/b7b53c44-d4fb-44cc-5007-28bd23d3bb00/original",
+      "verified": false
+     }
+    },
+    "quoteCount": 0,
+    "combinedRecastCount": 0
+   }
+  ]
+ }
+}

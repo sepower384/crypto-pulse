@@ -39,6 +39,33 @@
     ]
   },
 
+  "farcaster": {
+    "comment": "Warpcast 공개 API, 키 불필요. fid 를 적어두면 조회 1회 절약",
+    "users": [
+      {"username": "vitalik.eth", "name": "Vitalik Buterin", "fid": 5650},
+      {"username": "dwr.eth", "name": "Dan Romero", "fid": 3, "require_crypto": true},
+      {"username": "jessepollak", "name": "Jesse Pollak", "fid": 99, "require_crypto": true},
+      {"username": "linda", "name": "Linda Xie", "fid": 12, "require_crypto": true},
+      {"username": "cdixon.eth", "name": "Chris Dixon", "fid": 25, "require_crypto": true},
+      {"username": "balajis", "name": "Balaji", "fid": 37, "require_crypto": true},
+      {"username": "barmstrong", "name": "Brian Armstrong", "fid": 20, "require_crypto": true},
+      {"username": "tim", "name": "Tim Beiko", "fid": 207},
+      {"username": "polynya.eth", "name": "polynya", "fid": 11188}
+    ]
+  },
+
+  "telegram": {
+    "comment": "t.me/s 공개채널 미리보기, 키 불필요. 인물 인사이트와 별도로 '온체인·속보' 섹션에 뜬다",
+    "max_age_hours": 12,
+    "per_channel_limit": 2,
+    "max_items": 5,
+    "channels": [
+      {"channel": "lookonchainchannel", "name": "Lookonchain"},
+      {"channel": "wublockchainenglish", "name": "Wu Blockchain"},
+      {"channel": "WatcherGuru", "name": "Watcher Guru", "require_crypto": true}
+    ]
+  },
+
   "blogs": [
     {"url": "https://vitalik.eth.limo/feed.xml", "name": "Vitalik 블로그"},
     {"url": "https://cryptohayes.medium.com/feed", "name": "Arthur Hayes 에세이"},
@@ -55,6 +82,7 @@
 
   "insights": {
     "max_items": 8,
+    "social_max_age_hours": 96,
     "blog_max_age_hours": 240
   }
 }
