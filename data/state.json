@@ -1,5 +1,5 @@
 {
- "last_run": "2026-09-15T13:43:08.733895+00:00",
+ "last_run": "2026-09-15T15:43:10.696372+00:00",
  "mentions": [
   {
    "counts": {
@@ -763,6 +763,37 @@
    },
    "total": 93,
    "ts": "2026-09-15T13:43:08.733895+00:00"
+  },
+  {
+   "counts": {
+    "#AI 에이전트": 2,
+    "#ETF": 4,
+    "#L2·롤업": 3,
+    "#RWA·토큰화": 3,
+    "#규제·SEC": 22,
+    "#금리·연준": 5,
+    "#스테이블코인": 4,
+    "#양자컴퓨터": 1,
+    "#청산·레버리지": 4,
+    "#트럼프": 6,
+    "ARB": 1,
+    "BTC": 26,
+    "COIN": 1,
+    "DOT": 1,
+    "EDEL": 1,
+    "ETH": 18,
+    "HYPE": 3,
+    "LINK": 1,
+    "PUMP": 1,
+    "ROUTE": 1,
+    "SOL": 9,
+    "STANDARD": 1,
+    "USDC": 2,
+    "USDT": 1,
+    "XRP": 1
+   },
+   "total": 95,
+   "ts": "2026-09-15T15:43:10.696372+00:00"
   }
  ],
  "seen": {
@@ -895,6 +926,11 @@
   "reddit:1wgyhij": "2026-09-15T13:43:08.733895+00:00",
   "reddit:1wgzrd5": "2026-09-15T13:43:08.733895+00:00",
   "reddit:1wgzree": "2026-09-15T13:43:08.733895+00:00",
+  "reddit:1wh0bj6": "2026-09-15T15:43:10.696372+00:00",
+  "reddit:1wh0hs4": "2026-09-15T15:43:10.696372+00:00",
+  "reddit:1wh0vri": "2026-09-15T15:43:10.696372+00:00",
+  "reddit:1wh1cv3": "2026-09-15T15:43:10.696372+00:00",
+  "reddit:1wh2l4v": "2026-09-15T15:43:10.696372+00:00",
   "telegram:WatcherGuru/15027": "2026-09-13T19:43:09.902920+00:00",
   "telegram:WatcherGuru/15028": "2026-09-13T23:43:08.094871+00:00",
   "telegram:WatcherGuru/15031": "2026-09-14T03:43:08.515348+00:00",
@@ -914,6 +950,8 @@
   "telegram:WatcherGuru/15061": "2026-09-15T05:43:08.119889+00:00",
   "telegram:WatcherGuru/15062": "2026-09-15T09:43:12.842439+00:00",
   "telegram:WatcherGuru/15063": "2026-09-15T09:43:12.842439+00:00",
+  "telegram:WatcherGuru/15066": "2026-09-15T15:43:10.696372+00:00",
+  "telegram:WatcherGuru/15070": "2026-09-15T15:43:10.696372+00:00",
   "telegram:lookonchainchannel/10213": "2026-09-13T10:43:21.717061+00:00",
   "telegram:lookonchainchannel/10214": "2026-09-14T01:43:08.723960+00:00",
   "telegram:lookonchainchannel/10217": "2026-09-14T03:43:08.515348+00:00",
@@ -929,6 +967,7 @@
   "telegram:lookonchainchannel/10235": "2026-09-15T09:43:12.842439+00:00",
   "telegram:lookonchainchannel/10237": "2026-09-15T11:43:10.863905+00:00",
   "telegram:lookonchainchannel/10239": "2026-09-15T13:43:08.733895+00:00",
+  "telegram:lookonchainchannel/10243": "2026-09-15T15:43:10.696372+00:00",
   "telegram:wublockchainenglish/26002": "2026-09-13T10:43:21.717061+00:00",
   "telegram:wublockchainenglish/26003": "2026-09-13T10:43:21.717061+00:00",
   "telegram:wublockchainenglish/26004": "2026-09-13T14:27:37.735476+00:00",
@@ -960,23 +999,25 @@
   "telegram:wublockchainenglish/26030": "2026-09-15T07:43:11.127039+00:00",
   "telegram:wublockchainenglish/26031": "2026-09-15T09:43:12.842439+00:00",
   "telegram:wublockchainenglish/26032": "2026-09-15T11:43:10.863905+00:00",
-  "telegram:wublockchainenglish/26033": "2026-09-15T13:43:08.733895+00:00"
+  "telegram:wublockchainenglish/26033": "2026-09-15T13:43:08.733895+00:00",
+  "telegram:wublockchainenglish/26034": "2026-09-15T15:43:10.696372+00:00",
+  "telegram:wublockchainenglish/26035": "2026-09-15T15:43:10.696372+00:00"
  },
  "trending_prev": [
   "PONS",
   "AKE",
+  "BTC",
   "ARB",
   "STANDARD",
-  "BTC",
   "PENGU",
-  "STONK",
-  "LAPTOP",
   "XRP",
-  "MON",
-  "ZAMA",
+  "VVV",
   "SOL",
   "ZEC",
-  "CASHCAT",
+  "STONK",
+  "ETH",
+  "LIT",
+  "PI",
   "UNI"
  ]
 }
