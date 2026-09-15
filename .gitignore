@@ -5,3 +5,5 @@ __pycache__/
 .venv/
 data/outbox/
 data/*.tmp
+data/preview_telegram.html
+data/preview_slack.txt

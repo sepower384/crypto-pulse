@@ -39,6 +39,24 @@ def chunked_sections(title, lines):
     return blocks
 
 
+def blocks_from_doc(doc):
+    """브리핑 문서(main.build_message 의 doc) → Block Kit 블록."""
+    blocks = []
+    for d in doc:
+        kind = d["kind"]
+        if kind == "header":
+            blocks.append({"type": "header", "text": {"type": "plain_text", "text": d["text"][:150]}})
+        elif kind == "text":
+            blocks.append(section(d["text"]))
+        elif kind == "section":
+            blocks += chunked_sections(d["title"], d["lines"])
+        elif kind == "divider":
+            blocks.append({"type": "divider"})
+        elif kind == "context":
+            blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text": d["text"][:2900]}]})
+    return blocks
+
+
 def send(blocks, fallback_text, webhook=None):
     webhook = webhook or os.environ.get("SLACK_WEBHOOK_URL", "").strip()
     if not webhook:

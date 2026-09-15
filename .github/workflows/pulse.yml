@@ -2,7 +2,8 @@
 #
 # 상태(data/state.json: 보낸 글 · 언급량 히스토리 · 직전 트렌딩)는 실행 후 커밋해서 다음 회차로 넘긴다.
 # 매 회차 커밋이 생기므로 "60일 비활성 → 예약 실행 자동중지"도 같이 막힌다.
-# 필요한 Secrets: SLACK_WEBHOOK_URL (필수) · GEMINI_API_KEY (선택, AI 요약) · X_COOKIES (선택, X 수집)
+# 필요한 Secrets: SLACK_WEBHOOK_URL 또는 텔레그램(TELEGRAM_BOT_TOKEN_PULSE|TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID) 중 하나 이상
+#   · TELEGRAM_TOPIC_PULSE (선택, 토픽 스레드 id) · GEMINI_API_KEY (선택, AI 요약) · X_COOKIES (선택, X 수집)
 name: crypto-pulse
 
 on:
@@ -41,14 +42,21 @@ jobs:
           pip install playwright
           python -m playwright install --with-deps chromium
 
-      - name: 수집 · 분석 · 슬랙 전송
+      - name: 수집 · 분석 · 슬랙/텔레그램 전송
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN_PULSE: ${{ secrets.TELEGRAM_BOT_TOKEN_PULSE }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOPIC_PULSE: ${{ secrets.TELEGRAM_TOPIC_PULSE }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PYTHONUTF8: "1"
         run: |
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "::error::저장소 Secrets 에 SLACK_WEBHOOK_URL 이 없다"
+          # 슬랙 웹훅이나 텔레그램(전용 또는 공용 토큰 + 채팅 id) 중 하나만 있어도 돈다
+          HAS_TG=""
+          if [ -n "$TELEGRAM_BOT_TOKEN_PULSE$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then HAS_TG=1; fi
+          if [ -z "$SLACK_WEBHOOK_URL" ] && [ -z "$HAS_TG" ]; then
+            echo "::error::저장소 Secrets 에 SLACK_WEBHOOK_URL 도, 텔레그램(TELEGRAM_BOT_TOKEN_PULSE 또는 TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID)도 없다"
             exit 1
           fi
           if [ "${{ github.event.inputs.force }}" = "true" ]; then

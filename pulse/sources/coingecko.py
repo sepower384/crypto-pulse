@@ -17,6 +17,7 @@ def parse(data):
             "id": it.get("id", ""),
             "rank": it.get("market_cap_rank"),
             "change_24h": round(chg, 1) if isinstance(chg, (int, float)) else None,
+            "image": it.get("large") or it.get("small") or it.get("thumb") or "",
         })
     return coins
 

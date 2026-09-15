@@ -1,23 +1,26 @@
-"""1회 실행: 수집 → 트렌드/인사이트 분석 → 슬랙 전송 → state 저장.
+"""1회 실행: 수집 → 트렌드/인사이트 분석 → 슬랙·텔레그램 전송 → state 저장.
 
-python -m pulse.main              # 실제 전송
-python -m pulse.main --dry-run    # 전송·state 저장 없이 미리보기
-python -m pulse.main --force      # 새 소식 없어도 전송
+python -m pulse.main                     # 실제 전송 (슬랙·텔레그램 중 설정된 쪽)
+python -m pulse.main --dry-run           # 전송·state 저장 없이 슬랙 블록 출력
+python -m pulse.main --force             # 새 소식 없어도 전송
+python -m pulse.main --preview-telegram  # 전송·state 저장 없이 data/preview_telegram.html · preview_slack.txt 생성
 """
 import argparse
+import html
 import json
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
-from . import insights, slack, state, trends
+from . import chart, insights, slack, state, telegram as tgsend, trends, wording
 from .sources import blogs, bluesky, coingecko, farcaster, reddit, telegram, x
 from .translate import summarize, to_korean
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE_LABEL = {"x": "X", "reddit": "Reddit", "bluesky": "Bluesky", "farcaster": "Farcaster",
                 "telegram": "Telegram", "blogs": "블로그", "coingecko": "CoinGecko"}
+TG_TOPIC = "🗣️ 세력의 귀동냥"
 
 
 def load_config(path=None):
@@ -70,6 +73,23 @@ def who(author):
     return f"{author} ({role})" if role else author
 
 
+def pick_photo(tr, trending, stamp, cfg):
+    """메시지당 사진 1장: 언급 횟수 막대차트 우선, 안 되면 코인게코 인기검색 1위 코인 이미지."""
+    top = tr["top"][:8]
+    if len(top) >= 3:
+        url = chart.bar_chart_url([(ent_label(e), n, e.startswith("#")) for e, n, _ in top],
+                                  f"가장 많이 나온 이야기 · 최근 {cfg['trends'].get('window_hours', 24)}시간 언급 횟수")
+        if url:
+            return {"kind": "chart", "url": url,
+                    "caption": f"<b>📊 가장 많이 나온 이야기</b>\n{stamp} 기준 · 주황은 코인, 보라는 주제입니다"}
+    if trending and trending[0].get("image"):
+        c = trending[0]
+        return {"kind": "coin", "url": c["image"],
+                "caption": f"<b>🔥 코인게코 인기검색 1위</b>\n{html.escape(c.get('name') or c['symbol'], quote=False)}"
+                           f"({html.escape(c['symbol'], quote=False)})입니다"}
+    return None
+
+
 def build_message(cfg, results, st, now):
     posts = [p for r in results for p in r.posts]
     by_name = {r.name: r for r in results}
@@ -79,10 +99,14 @@ def build_message(cfg, results, st, now):
     picks = insights.select(posts, st["seen"], cfg, now)
     news = insights.channel_news(posts, st["seen"], cfg, now, exclude=picks)
     rtop = insights.reddit_top(posts, st["seen"], cfg)
+    g = wording.Glossary()  # 어려운 단어는 이 브리핑에서 처음 나올 때 한 번만 풀어 준다 → 메시지 순서대로 호출
 
     kst = now + timedelta(hours=cfg.get("timezone_offset_hours", 9))
-    blocks = [{"type": "header", "text": {"type": "plain_text", "text": f"🌐 크립토 펄스 · {kst.month}월 {kst.day}일 {kst:%H:%M}"}},
-              slack.section("_해외 크립토 커뮤니티·유명인·속보 채널에서 최근 몇 시간 동안 오간 이야기를 한국어로 정리했어요._")]
+    stamp = f"{kst.month}월 {kst.day}일 {kst:%H:%M}"
+    doc = [{"kind": "header", "text": f"🌐 크립토 펄스 · {stamp}",
+            "tg_title": f"{TG_TOPIC} · 해외 크립토 여론", "tg_sub": f"{stamp} 기준"},
+           {"kind": "text", "text": "_해외 크립토 커뮤니티·유명인·속보 채널에서 최근 몇 시간 동안 오간 이야기를 "
+                                    "한국어로 정리했습니다. 인용문은 원문을 기계 번역한 것이라 표현이 조금 어색할 수 있습니다._"}]
 
     # AI 요약 (선택)
     lines = [f"[{p.source}] {p.author}: {p.text[:200]}" for p in picks + news]
@@ -90,81 +114,104 @@ def build_message(cfg, results, st, now):
     lines += [f"[급상승] {ent_label(s['ent'])} {s['n']}회 (평소 {s['base']})" for s in tr["surges"]]
     summary = summarize(lines)
     if summary:
-        blocks.append(slack.section("🧭 *지금 흐름 (AI 요약)*\n" + "\n".join(f"• {slack.esc(b)}" for b in summary)))
+        doc.append({"kind": "section", "title": "🧭 지금 흐름 (AI 요약)",
+                    "lines": [f"• {slack.esc(g.explain(wording.polite(b)))}" for b in summary]})
 
     # 트렌드
     trend_lines = []
     if tr["warm"]:
         for s in tr["surges"]:
             ex = s["example"]
-            tail = f" — {slack.link(ex.url, to_korean(ex.extra.get('title') or ex.text)[:70])}" if ex else ""
+            # 링크 라벨에 줄바꿈이 섞이면 슬랙 링크도, 줄 단위 텔레그램 변환도 깨진다 → 한 줄로
+            label_txt = " ".join(to_korean(ex.extra.get("title") or ex.text).split())[:70] if ex else ""
+            tail = f" — {slack.link(ex.url, label_txt)}" if ex else ""
+            label = slack.esc(g.explain(ent_label(s["ent"])))
             if s["new"]:
-                trend_lines.append(f"🆕 *{ent_label(s['ent'])}* — 평소엔 조용하다가 이번에 {s['n']}번 언급됐어요{tail}")
+                trend_lines.append(f"🆕 *{label}* — 평소엔 조용하다가 이번에 {s['n']}번 언급됐습니다{tail}")
             else:
-                trend_lines.append(f"📈 *{ent_label(s['ent'])}* — 평소 {s['base']}번 → 이번 {s['n']}번, "
-                                   f"*{s['ratio']}배*로 이야기가 늘었어요{tail}")
+                trend_lines.append(f"📈 *{label}* — 평소 {s['base']}번에서 이번 {s['n']}번으로, "
+                                   f"이야기가 *{s['ratio']}배* 늘었습니다{tail}")
         if not trend_lines:
-            trend_lines.append("_평소보다 갑자기 화제가 된 코인·주제는 없어요. 조용한 편이에요._")
+            trend_lines.append("_평소보다 갑자기 화제가 된 코인·주제는 없습니다. 비교적 조용한 흐름으로 보입니다._")
     top_txt = ", ".join(
-        f"{ent_label(e)} {n}번" + (" (평소보다 ↑)" if r and r >= 1.5 else " (평소보다 ↓)" if r and r <= 0.6 else "")
+        f"{slack.esc(g.explain(ent_label(e)))} {n}번"
+        + (" (평소보다 ↑)" if r and r >= 1.5 else " (평소보다 ↓)" if r and r <= 0.6 else "")
         for e, n, r in tr["top"][:8])
     if top_txt:
         trend_lines.append(f"🔢 *가장 많이 나온 이야기*: {top_txt}")
     if not tr["warm"]:
-        trend_lines.append(f"_아직 평소 수준을 배우는 중이에요 ({tr['runs']}/3회). "
-                           "3번째 알림부터 '갑자기 화제가 된 코인'도 짚어드려요._")
+        trend_lines.append(f"_아직 {g.explain('기준선')}을 익히는 중입니다 ({tr['runs']}/3회). "
+                           "3번째 알림부터는 갑자기 화제가 된 코인도 함께 짚어 드리겠습니다._")
     if new_trending:
         tt = ", ".join(
             f"{c['symbol']}" + (f"(하루 {c['change_24h']:+.0f}%)" if c["change_24h"] is not None else "")
             for c in new_trending[:7])
-        trend_lines.append(f"🔥 *새로 검색이 몰리기 시작한 코인* (코인게코 인기검색 신규 진입): {tt}")
-    blocks += slack.chunked_sections("📊 요즘 사람들이 제일 많이 얘기하는 것", trend_lines)
+        trend_lines.append(f"🔥 *새로 검색이 몰리기 시작한 코인* (코인게코 인기검색에 새로 들어온 코인입니다): {tt}")
+    doc.append({"kind": "section", "title": "📊 요즘 사람들이 가장 많이 이야기하는 주제", "lines": trend_lines})
 
     # 유명인사 인사이트
     if picks:
-        blocks.append({"type": "divider"})
+        doc.append({"kind": "divider"})
         ins_lines = []
         for p in picks:
             icon = {"x": "𝕏", "bluesky": "🦋", "farcaster": "🟪", "blog": "📝"}[p.source]
             meta = f" · ❤️ {slack.fmt_num(p.likes)}" if p.likes else ""
-            ko = to_korean(p.extra.get("title") if p.source == "blog" else p.text, 450)
+            ko = g.explain(to_korean(p.extra.get("title") if p.source == "blog" else p.text, 450))
             quote = ""
             if p.extra.get("quote"):
                 q = p.extra["quote"]
-                quote = f"\n> ↪ @{slack.esc(q['handle'])}: {slack.esc(to_korean(q['text'], 200))[:200]}"
+                quote = f"\n> ↪ @{slack.esc(q['handle'])}: {slack.esc(g.explain(to_korean(q['text'], 200)))[:260]}"
             ins_lines.append(
                 f"{icon} *{slack.esc(who(p.author))}*{meta} · {slack.link(p.url, '원문 보기')}\n"
-                f"> {slack.esc(ko).replace(chr(10), chr(10) + '> ')[:600]}{quote}\n")
-        blocks += slack.chunked_sections("🗣️ 업계 유명인들이 한 말 (한국어 번역)", ins_lines)
+                f"> {slack.esc(ko).replace(chr(10), chr(10) + '> ')[:700]}{quote}\n")
+        doc.append({"kind": "section", "title": "🗣️ 업계 유명인들이 한 말 (한국어 번역)", "lines": ins_lines})
 
     # 텔레그램 속보·온체인
     if news:
-        blocks.append({"type": "divider"})
+        doc.append({"kind": "divider"})
         n_lines = []
         for p in news:
             views = p.extra.get("views", 0)
             meta = f" · 👁 {slack.fmt_num(views)}" if views else ""
-            ko = slack.esc(to_korean(p.text, 350))[:320].replace("\n", " ")
+            ko = slack.esc(g.explain(to_korean(p.text, 350)))[:400].replace("\n", " ")
             n_lines.append(f"📡 *{slack.esc(who(p.author))}*{meta} · {slack.link(p.url, '원문 보기')}\n> {ko}\n")
-        blocks += slack.chunked_sections("📡 속보·고래 움직임 (텔레그램 채널)", n_lines)
+        doc.append({"kind": "section", "title": "📡 속보·고래 움직임 (텔레그램 채널)", "lines": n_lines})
 
     # 레딧
     if rtop:
-        blocks.append({"type": "divider"})
+        doc.append({"kind": "divider"})
         r_lines = [
             f"{i}. {slack.link(p.url, to_korean(p.extra.get('title', ''), 200)[:150])} _({slack.esc(p.handle)})_"
             for i, p in enumerate(rtop, 1)]
-        blocks += slack.chunked_sections("👾 해외 코인 커뮤니티(레딧)에서 오늘 뜬 글", r_lines)
+        doc.append({"kind": "section", "title": "👾 해외 코인 커뮤니티(레딧)에서 오늘 뜬 글", "lines": r_lines})
 
     status = "수집 현황 — " + " | ".join(
-        f"{'✅' if r.ok else '⏸️'} {SOURCE_LABEL.get(r.name, r.name)} " + (r.note if r.ok else "이번엔 못 가져옴")
+        f"{'✅' if r.ok else '⏸️'} {SOURCE_LABEL.get(r.name, r.name)} " + (r.note if r.ok else "이번에는 가져오지 못했습니다")
         for r in results)
-    blocks.append({"type": "context", "elements": [{"type": "mrkdwn", "text": slack.esc(status)[:2900]}]})
+    doc.append({"kind": "context", "text": slack.esc(status)[:2900]})
 
     has_news = bool(picks or news or rtop or tr["surges"] or new_trending)
-    return {"blocks": blocks, "has_news": has_news, "trends": tr, "picks": picks, "news": news, "reddit": rtop,
-            "trending": trending,
+    return {"doc": doc, "blocks": slack.blocks_from_doc(doc), "has_news": has_news, "trends": tr, "picks": picks,
+            "news": news, "reddit": rtop, "trending": trending, "photo": pick_photo(tr, trending, stamp, cfg),
             "fallback": f"크립토 펄스 {kst:%m/%d %H:%M} — 인사이트 {len(picks)} · 속보 {len(news)} · 급상승 {len(tr['surges'])}"}
+
+
+def telegram_messages(msg):
+    return tgsend.split_html(tgsend.render(msg["doc"]))
+
+
+def slack_text(blocks):
+    out = []
+    for b in blocks:
+        if b["type"] == "section":
+            out.append(b["text"]["text"] + "\n")
+        elif b["type"] == "header":
+            out.append("# " + b["text"]["text"])
+        elif b["type"] == "context":
+            out.append("_" + b["elements"][0]["text"] + "_")
+        elif b["type"] == "divider":
+            out.append("---")
+    return "\n".join(out)
 
 
 def write_outbox(msg, now):
@@ -173,14 +220,22 @@ def write_outbox(msg, now):
     path = os.path.join(d, f"{now:%Y%m%d}.md")
     with open(path, "a", encoding="utf-8") as f:
         f.write(f"\n\n## {now.isoformat()}\n")
-        for b in msg["blocks"]:
-            if b["type"] == "section":
-                f.write(b["text"]["text"] + "\n\n")
-            elif b["type"] == "header":
-                f.write("# " + b["text"]["text"] + "\n")
-            elif b["type"] == "context":
-                f.write("_" + b["elements"][0]["text"] + "_\n")
+        f.write(slack_text(msg["blocks"]) + "\n")
     return path
+
+
+def deliver(msg):
+    """슬랙·텔레그램 각각 시도. 한쪽 예외·실패가 다른 쪽을 막지 않는다."""
+    try:
+        slack_ok, slack_detail = slack.send(msg["blocks"], msg["fallback"])
+    except Exception as e:  # noqa: BLE001
+        slack_ok, slack_detail = False, f"{type(e).__name__}: {str(e)[:100]}"
+    try:
+        tg = tgsend.send_briefing(telegram_messages(msg), msg.get("photo"))
+    except Exception as e:  # noqa: BLE001
+        tg = {"configured": tgsend.config() is not None, "ok": False, "detail": f"{type(e).__name__}: {str(e)[:100]}"}
+    return {"slack": {"configured": slack_detail != "SLACK_WEBHOOK_URL 없음", "ok": slack_ok, "detail": slack_detail},
+            "telegram": tg}
 
 
 def run(dry_run=False, force=False, cfg=None, now=None):
@@ -200,13 +255,22 @@ def run(dry_run=False, force=False, cfg=None, now=None):
         print(json.dumps(msg["blocks"], ensure_ascii=False, indent=1))
         return 0
 
-    sent, detail = False, "새 소식 없음 — 전송 생략"
-    if msg["has_news"] or force:
+    attempted = bool(msg["has_news"] or force)
+    res = {"slack": {"configured": False, "ok": False, "detail": "새 소식 없음 — 전송 생략"},
+           "telegram": {"configured": False, "ok": False, "detail": "새 소식 없음 — 전송 생략"}}
+    if attempted:
         write_outbox(msg, now)
-        sent, detail = slack.send(msg["blocks"], msg["fallback"])
-    print(f"slack: sent={sent} {detail}")
+        res = deliver(msg)
+    for name in ("slack", "telegram"):
+        print(f"{name}: sent={res[name]['ok']} {res[name]['detail']}")
+    sent = res["slack"]["ok"] or res["telegram"]["ok"]
+    configured = res["slack"]["configured"] or res["telegram"]["configured"]
+    if attempted and sent and not all(res[n]["ok"] for n in res if res[n]["configured"]):
+        print("::warning::슬랙·텔레그램 중 한쪽만 전송됐습니다 (보낸 글 기록은 진행)")
 
-    # 전송 실패 시 seen 을 올리지 않아 다음 회차에 다시 시도. 트렌드 히스토리는 항상 쌓는다.
+    # 보낸 글(seen) 기록: 둘 중 하나라도 나갔으면 기록한다. 한쪽만 실패했다고 다음 회차에 다시 보내면
+    # 성공한 쪽에 같은 글이 두 번 나가기 때문. 둘 다 실패면 기록하지 않아 다음 회차에 재시도.
+    # 트렌드 히스토리는 항상 쌓는다.
     if sent:
         state.mark_seen(st, msg["picks"] + msg["news"] + msg["reddit"], now)
     st["mentions"].append({"ts": now.isoformat(), **msg["trends"]["snapshot"]})
@@ -214,17 +278,83 @@ def run(dry_run=False, force=False, cfg=None, now=None):
         st["trending_prev"] = [c["symbol"] for c in msg["trending"]]
     state.save(st, now=now, history_runs=cfg["trends"]["history_runs"])
 
-    no_webhook = detail == "SLACK_WEBHOOK_URL 없음"
-    return 0 if (sent or not (msg["has_news"] or force) or no_webhook) else 1
+    return 0 if (sent or not attempted or not configured) else 1
+
+
+_PREVIEW_CSS = """body{font-family:system-ui,'Malgun Gothic',sans-serif;background:#e7ebf0;margin:0;padding:16px;color:#111}
+h1{font-size:20px}h2{font-size:16px;margin-top:28px}.meta{background:#fff;padding:12px;border-radius:8px}
+.bubble{background:#fff;max-width:560px;padding:10px 14px;border-radius:12px;white-space:pre-wrap;line-height:1.45;
+box-shadow:0 1px 2px #0002;overflow-wrap:anywhere}.bubble blockquote{margin:4px 0;padding:2px 8px;border-left:3px solid #3390ec;
+background:#3390ec14}.bubble a{color:#168acd}pre{background:#1e1e1e;color:#ddd;padding:10px;overflow-x:auto;
+white-space:pre-wrap;font-size:12px;border-radius:6px}img{max-width:560px;width:100%;border-radius:12px}"""
+
+
+def write_previews(msg, out_dir, now):
+    """텔레그램 HTML 원문·분할 결과·사진 URL + 슬랙 텍스트를 파일로. 전송·state 저장 없음."""
+    os.makedirs(out_dir, exist_ok=True)
+    chunks = telegram_messages(msg)
+    photo = msg.get("photo")
+    e = lambda s: html.escape(s or "", quote=True)  # noqa: E731
+    cfg = tgsend.config()
+    parts = [f"<!doctype html><meta charset='utf-8'><title>텔레그램 미리보기 · {TG_TOPIC}</title>",
+             f"<style>{_PREVIEW_CSS}</style><h1>텔레그램 미리보기 · {e(TG_TOPIC)}</h1>",
+             "<div class='meta'>",
+             f"생성: {e(now.isoformat())}<br>메시지 {len(chunks)}개 (UTF-16 길이: "
+             f"{', '.join(str(tgsend.u16(c)) for c in chunks)} / 한도 {tgsend.MAX_MESSAGE})<br>",
+             f"새 소식 여부(has_news): {msg['has_news']}<br>",
+             f"텔레그램 설정: {'있음 (' + cfg['token_source'] + ')' if cfg else '없음 — 실제 실행 시 건너뜀'}<br>",
+             "전송 순서: sendPhoto(사진 먼저) → sendMessage × N (사이 1초), parse_mode=HTML, "
+             "disable_web_page_preview=true, message_thread_id=TELEGRAM_TOPIC_PULSE</div>"]
+    if photo:
+        parts += [f"<h2>0. 사진 ({e(photo['kind'])}) — sendPhoto</h2>",
+                  f"<p>URL ({len(photo['url'])}자): <a href='{e(photo['url'])}'>{e(photo['url'])}</a></p>",
+                  f"<img src='{e(photo['url'])}' alt='photo'>",
+                  f"<p>캡션 (UTF-16 {tgsend.u16(photo['caption'])} / {tgsend.MAX_CAPTION}):</p>",
+                  f"<div class='bubble'>{photo['caption']}</div><pre>{e(photo['caption'])}</pre>"]
+    else:
+        parts.append("<h2>0. 사진 없음</h2>")
+    for i, c in enumerate(chunks, 1):
+        parts += [f"<h2>{i}/{len(chunks)}. sendMessage — {tgsend.u16(c)}자</h2>",
+                  f"<div class='bubble'>{c}</div>", f"<details><summary>HTML 원문</summary><pre>{e(c)}</pre></details>"]
+    parts += ["<h2>분할 전 전체 HTML</h2>", f"<pre>{e(tgsend.render(msg['doc']))}</pre>"]
+    tg_path = os.path.join(out_dir, "preview_telegram.html")
+    with open(tg_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(parts))
+
+    slack_path = os.path.join(out_dir, "preview_slack.txt")
+    with open(slack_path, "w", encoding="utf-8") as f:
+        f.write(f"# 슬랙 미리보기 {now.isoformat()} · 블록 {len(msg['blocks'])}개\n")
+        f.write(f"fallback: {msg['fallback']}\n\n")
+        f.write(slack_text(msg["blocks"]))
+        f.write("\n\n===== Block Kit JSON =====\n")
+        f.write(json.dumps(msg["blocks"], ensure_ascii=False, indent=1))
+    return tg_path, slack_path
+
+
+def preview(cfg=None, now=None, out_dir=None):
+    load_dotenv()
+    cfg = cfg or load_config()
+    now = now or datetime.now(timezone.utc)
+    st = state.load()  # 읽기만 한다. state.save 는 부르지 않음
+    results = collect_all(cfg)
+    msg = build_message(cfg, results, st, now)
+    for r in results:
+        print(f"[{r.name}] ok={r.ok} {r.note}")
+    tg_path, slack_path = write_previews(msg, out_dir or os.path.join(ROOT, "data"), now)
+    print(f"텔레그램 미리보기: {tg_path}\n슬랙 미리보기: {slack_path}")
+    return 0
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--preview-telegram", action="store_true", help="전송·state 저장 없이 미리보기 파일만 만든다")
     a = ap.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
+    if a.preview_telegram:
+        return preview()
     return run(dry_run=a.dry_run, force=a.force)
 
 
