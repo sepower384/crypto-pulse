@@ -1,5 +1,5 @@
 {
- "last_run": "2026-09-15T03:43:08.461249+00:00",
+ "last_run": "2026-09-15T05:43:08.119889+00:00",
  "mentions": [
   {
    "counts": {
@@ -610,6 +610,38 @@
    },
    "total": 92,
    "ts": "2026-09-15T03:43:08.461249+00:00"
+  },
+  {
+   "counts": {
+    "#AI 에이전트": 1,
+    "#ETF": 4,
+    "#L2·롤업": 1,
+    "#RWA·토큰화": 6,
+    "#규제·SEC": 18,
+    "#금리·연준": 2,
+    "#밈코인": 1,
+    "#비트코인 비축": 1,
+    "#스테이블코인": 4,
+    "#양자컴퓨터": 1,
+    "#청산·레버리지": 3,
+    "#트럼프": 6,
+    "#해킹·익스플로잇": 1,
+    "ARB": 1,
+    "AVAX": 1,
+    "BTC": 22,
+    "COIN": 1,
+    "EDEL": 1,
+    "ETH": 18,
+    "HYPE": 2,
+    "LINK": 2,
+    "PONS": 1,
+    "SOL": 7,
+    "STANDARD": 1,
+    "USDC": 4,
+    "XRP": 1
+   },
+   "total": 94,
+   "ts": "2026-09-15T05:43:08.119889+00:00"
   }
  ],
  "seen": {
@@ -690,6 +722,7 @@
   "reddit:1wg31wo": "2026-09-14T15:43:07.946026+00:00",
   "reddit:1wg3t7j": "2026-09-14T15:43:07.946026+00:00",
   "reddit:1wg478n": "2026-09-14T17:43:09.379588+00:00",
+  "reddit:1wg4oub": "2026-09-15T05:43:08.119889+00:00",
   "reddit:1wg51fe": "2026-09-15T03:43:08.461249+00:00",
   "reddit:1wg5e0d": "2026-09-14T19:43:09.394407+00:00",
   "reddit:1wg5zl2": "2026-09-14T23:43:09.085466+00:00",
@@ -705,6 +738,7 @@
   "reddit:1wgbvnu": "2026-09-15T01:43:09.934539+00:00",
   "reddit:1wgbzks": "2026-09-14T21:43:08.852281+00:00",
   "reddit:1wgcdw0": "2026-09-14T21:43:08.852281+00:00",
+  "reddit:1wgchia": "2026-09-15T05:43:08.119889+00:00",
   "reddit:1wgcjps": "2026-09-14T19:43:09.394407+00:00",
   "reddit:1wgcpse": "2026-09-14T21:43:08.852281+00:00",
   "reddit:1wgdmf2": "2026-09-14T23:43:09.085466+00:00",
@@ -717,6 +751,9 @@
   "reddit:1wgk0ht": "2026-09-15T03:43:08.461249+00:00",
   "reddit:1wgkers": "2026-09-15T03:43:08.461249+00:00",
   "reddit:1wgn98d": "2026-09-15T03:43:08.461249+00:00",
+  "reddit:1wgok5e": "2026-09-15T05:43:08.119889+00:00",
+  "reddit:1wgpnl2": "2026-09-15T05:43:08.119889+00:00",
+  "reddit:1wgpnom": "2026-09-15T05:43:08.119889+00:00",
   "telegram:WatcherGuru/15027": "2026-09-13T19:43:09.902920+00:00",
   "telegram:WatcherGuru/15028": "2026-09-13T23:43:08.094871+00:00",
   "telegram:WatcherGuru/15031": "2026-09-14T03:43:08.515348+00:00",
@@ -732,6 +769,8 @@
   "telegram:WatcherGuru/15056": "2026-09-15T01:43:09.934539+00:00",
   "telegram:WatcherGuru/15058": "2026-09-15T03:43:08.461249+00:00",
   "telegram:WatcherGuru/15059": "2026-09-15T01:43:09.934539+00:00",
+  "telegram:WatcherGuru/15060": "2026-09-15T05:43:08.119889+00:00",
+  "telegram:WatcherGuru/15061": "2026-09-15T05:43:08.119889+00:00",
   "telegram:lookonchainchannel/10213": "2026-09-13T10:43:21.717061+00:00",
   "telegram:lookonchainchannel/10214": "2026-09-14T01:43:08.723960+00:00",
   "telegram:lookonchainchannel/10217": "2026-09-14T03:43:08.515348+00:00",
@@ -742,6 +781,7 @@
   "telegram:lookonchainchannel/10226": "2026-09-15T01:43:09.934539+00:00",
   "telegram:lookonchainchannel/10231": "2026-09-15T03:43:08.461249+00:00",
   "telegram:lookonchainchannel/10232": "2026-09-15T03:43:08.461249+00:00",
+  "telegram:lookonchainchannel/10234": "2026-09-15T05:43:08.119889+00:00",
   "telegram:wublockchainenglish/26002": "2026-09-13T10:43:21.717061+00:00",
   "telegram:wublockchainenglish/26003": "2026-09-13T10:43:21.717061+00:00",
   "telegram:wublockchainenglish/26004": "2026-09-13T14:27:37.735476+00:00",
@@ -766,23 +806,25 @@
   "telegram:wublockchainenglish/26023": "2026-09-14T19:43:09.394407+00:00",
   "telegram:wublockchainenglish/26024": "2026-09-14T19:43:09.394407+00:00",
   "telegram:wublockchainenglish/26025": "2026-09-15T03:43:08.461249+00:00",
-  "telegram:wublockchainenglish/26027": "2026-09-15T03:43:08.461249+00:00"
+  "telegram:wublockchainenglish/26026": "2026-09-15T05:43:08.119889+00:00",
+  "telegram:wublockchainenglish/26027": "2026-09-15T03:43:08.461249+00:00",
+  "telegram:wublockchainenglish/26028": "2026-09-15T05:43:08.119889+00:00"
  },
  "trending_prev": [
   "PONS",
-  "ZCAT",
-  "STONK",
-  "ZEC",
   "BTC",
+  "STONK",
+  "BR",
+  "ZEC",
+  "HYPE",
+  "POWER",
+  "STANDARD",
+  "ARB",
+  "UNI",
+  "EMBER",
   "PENGU",
-  "PRL",
-  "AERO",
-  "XRP",
-  "LSK",
-  "ETH",
-  "LIT",
-  "NEAR",
-  "PENDLE",
-  "PUMP"
+  "VTHO",
+  "LAB",
+  "PEAQ"
  ]
 }
