@@ -15,8 +15,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
-from . import alpha, chart, friendly as fr, insights, slack, state, telegram as tgsend, trends, wording
-from .sources import (blogs, bluesky, coingecko, community_kr, farcaster, kr_news, news, onchain, reddit,
+from . import alpha, chart, friendly as fr, insights, slack, state, telegram as tgsend, tradeinfo, trends, wording
+from .sources import (blogs, bluesky, coingecko, community_kr, farcaster, kr_news, markets, news, onchain, reddit,
                       telegram, x)
 from .translate import summarize, to_korean
 
@@ -171,6 +171,23 @@ def build_message(cfg, results, st, now):
     launches = alpha.launch_news(posts, seen, now)
     hot, shill = alpha.degen_pick(pools, _extra(by_name, "onchain", "boosted", []), cfg)
     degen_prev = set(st.get("degen_prev", []))
+    # 코인별 '어디서 사나요 / 어떻게 투자하나요' 자료 (코인게코)
+    tcfg = cfg.get("tradeinfo", {})
+    alt_coins, deriv, kimchi, arb = [], {}, {}, []
+    if tcfg.get("enabled", True):
+        # 코인게코 무료 한도: 뒤로 갈수록 막히기 쉬워서 한 번에 크게 받는 것부터
+        kimchi = markets.kimchi()
+        if trending or any(t.get("cg_id") for t in hot + shill):
+            deriv = markets.derivatives()
+        seen_ids = set()
+        for c in (new_trending or trending)[:tcfg.get("coins", 3)]:
+            if c.get("id") and c["id"] not in seen_ids:
+                seen_ids.add(c["id"])
+                alt_coins.append({**c, "rows": markets.tickers(c["id"])})
+        for t in hot + shill:
+            if t.get("cg_id") and t["cg_id"] not in seen_ids:
+                seen_ids.add(t["cg_id"])
+                t["rows"] = markets.tickers(t["cg_id"])
     upbit = alpha.upbit_pick(posts, seen, now)
     flash = alpha.coinness_pick(posts, seen, cfg, now)
     kr = alpha.kr_hot(posts, seen, cfg, now)
@@ -238,6 +255,24 @@ def build_message(cfg, results, st, now):
         trend_lines.append(f"🔥 *검색이 새로 몰리기 시작한 코인* (코인 정보 사이트 코인게코 인기 검색 기준): {tt}")
     doc.append({"kind": "section", "title": "📊 요즘 사람들이 가장 많이 이야기하는 주제", "lines": trend_lines})
 
+    # 알트코인 어디서·어떻게
+    if alt_coins:
+        doc.append({"kind": "divider"})
+        c_lines = ["_요즘 검색이 몰리는 코인을 어디서 사고팔 수 있는지, 어떤 방식으로 투자할 수 있는지 정리했습니다._"]
+        for c in alt_coins:
+            name = c.get("name") or c["symbol"]
+            chg = f" · 하루 {fr.change(c['change_24h'])}" if c.get("change_24h") is not None else ""
+            c_lines.append(f"🪙 *{slack.esc(c['symbol'])}* ({slack.esc(name)}){chg}")
+            if c["rows"]:
+                body, sp = tradeinfo.lines_for(c["symbol"], c["rows"], deriv)
+                c_lines += body
+                if sp:
+                    arb.append((c["symbol"], sp))
+            else:
+                c_lines.append("      • 거래소 정보를 이번에는 가져오지 못했습니다")
+            c_lines.append(f"      • 자료: {slack.link('https://www.coingecko.com/ko/coins/' + c['id'], '코인게코')}\n")
+        doc.append({"kind": "section", "title": "🪙 요즘 뜨는 알트코인, 어디서 어떻게 사나요", "lines": c_lines})
+
     # 새 체인·메인넷
     chain_lines = [chain_line(c, posts, g) for c in new_chains]
     for c in movers:
@@ -257,7 +292,7 @@ def build_message(cfg, results, st, now):
         doc.append({"kind": "divider"})
         d_lines = ["_중개 회사 없이 블록체인 위에서 바로 사고파는 거래소에서 지금 거래가 가장 활발한 코인입니다. "
                    "하루에도 가격이 크게 오르내리니 구경하는 용도로만 보시는 것이 좋습니다._"]
-        d_lines += [degen_line(t, bool(degen_prev) and t["key"] not in degen_prev, g) for t in hot]
+        d_lines += [degen_line(t, bool(degen_prev) and t["key"] not in degen_prev, g, deriv, arb) for t in hot]
         heat = alpha.chain_heat(pools)[:4]
         if heat:
             d_lines.append("🔥 *인기 코인이 많이 몰린 블록체인*: "
@@ -265,8 +300,32 @@ def build_message(cfg, results, st, now):
         if shill:
             d_lines.append("\n💸 *돈을 내고 광고 중인 코인* — 최소한의 거래 규모는 넘겼지만, 광고 효과로 잠깐 오른 것일 수 있어 "
                            "특히 조심해서 보시는 것이 좋습니다")
-            d_lines += [degen_line(t, False, g) for t in shill]
+            d_lines += [degen_line(t, False, g, deriv, arb) for t in shill]
         doc.append({"kind": "section", "title": "🎰 지금 뜨는 코인 (블록체인 거래소 기준)", "lines": d_lines})
+
+    # 차익거래
+    k_rows = tradeinfo.kimchi_rows(kimchi)
+    if k_rows or arb:
+        doc.append({"kind": "divider"})
+        x_lines = ["_같은 코인도 거래소마다 가격이 조금씩 다릅니다. 싼 곳에서 사서 비싼 곳에서 파는 것을 차익거래라고 합니다._"]
+        if k_rows:
+            x_lines.append("🇰🇷 *김치 프리미엄* (국내 거래소 가격이 해외보다 얼마나 비싼지): "
+                           + ", ".join(f"{slack.esc(ent_label(sym))} {txt}" for sym, txt, _ in k_rows))
+            top = max(k_rows, key=lambda r: abs(r[2] or 0))
+            if abs(top[2] or 0) >= 2:
+                where = "해외에서 사서 국내에서 파는" if top[2] > 0 else "국내에서 사서 해외에서 파는"
+                x_lines.append(f"      • 차이가 {abs(top[2]):.1f}%까지 벌어져 있어 {where} 쪽이 유리한 상황입니다")
+            else:
+                x_lines.append("      • 지금은 차이가 2% 안쪽이라 수수료와 송금 시간을 빼면 남는 것이 거의 없습니다")
+        for sym, sp in arb[:4]:
+            x_lines.append(f"💱 *{slack.esc(sym)}* — {tradeinfo.market_label(sp['low'])}에서 "
+                           f"{tradeinfo.price_txt(sp['low']['usd'])}, {tradeinfo.market_label(sp['high'])}에서 "
+                           f"{tradeinfo.price_txt(sp['high']['usd'])}로 *{sp['pct']:.1f}%* 차이가 납니다")
+        x_lines.append("_하는 법: ① 싼 곳에서 산다 → ② 두 거래소 모두 그 코인 입출금이 열려 있는지 확인한다 → "
+                       "③ 비싼 곳으로 보내서 판다. 차이가 크게 벌어진 곳은 입출금이 막혀 있거나 거래량이 적은 경우가 많고, "
+                       "보내는 동안 가격이 움직일 수 있으니 소액으로 먼저 확인하시는 것이 좋습니다. "
+                       "해외 거래소에서 국내로 코인을 보낼 때는 거래소별 입금 규정(트래블룰)도 확인하셔야 합니다._")
+        doc.append({"kind": "section", "title": "💱 거래소 간 가격 차이 (차익거래)", "lines": x_lines})
 
     # 에어드랍
     if drops or guides:
@@ -471,7 +530,7 @@ def airdrop_line(i, d, g):
     return "\n".join(out) + "\n"
 
 
-def degen_line(t, fresh, g):
+def degen_line(t, fresh, g, deriv=None, arb=None):
     """블록체인 거래소 인기 코인 1건."""
     tag = " 🆕 새로 등장" if fresh else ""
     out = [f"🎲 *{slack.link(t['url'], t['symbol'] or t['name'])}* _({slack.esc(fr.chain(t['chain']))})_{tag}",
@@ -485,6 +544,17 @@ def degen_line(t, fresh, g):
         more.append(f"하루 동안 산 지갑 {t['buyers_24h']:,}개 · 판 지갑 {t.get('sellers_24h') or 0:,}개")
     if more:
         out.append("      • " + " · ".join(more))
+    if t.get("rows"):
+        body, sp = tradeinfo.lines_for(t["symbol"], t["rows"], deriv, has_airdrop_note=False)
+        out += body
+        if sp and arb is not None:
+            arb.append((t["symbol"], sp))
+    else:
+        dex = tradeinfo.dex_name(t.get("dex") or "")
+        out.append(f"      • 살 수 있는 곳: {slack.esc(dex)}({slack.esc(fr.chain(t['chain']))}) — "
+                   "아직 거래소 상장 전이라 블록체인 거래소에서만 거래됩니다")
+        out.append("      • 투자 방법: 현물 매매만 가능")
+        out.append(f"      • 사는 법: {slack.esc(tradeinfo.dex_howto(t))}")
     return "\n".join(out) + "\n"
 
 

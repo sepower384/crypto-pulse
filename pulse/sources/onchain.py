@@ -58,6 +58,8 @@ def parse_trending(data, now=None):
             "url": f"https://www.geckoterminal.com/{net_id}/pools/{a.get('address', '')}",
             "image": tok.get("image_url") or "",
             "key": p.get("id", ""),
+            "cg_id": tok.get("coingecko_coin_id") or "",
+            "dex": ((rel.get("dex") or {}).get("data") or {}).get("id", ""),
         })
     return pools
 

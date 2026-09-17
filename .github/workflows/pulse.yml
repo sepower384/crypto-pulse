@@ -16,7 +16,7 @@ on:
         type: boolean
         default: false
       mode:
-        description: "run(기본) / chats(봇이 들어간 방 조회, 전송 없음)"
+        description: "run(기본) / chats(봇이 들어간 방 조회, 전송 없음) / dry(수집·작성만, 전송·상태저장 없음)"
         type: string
         default: run
 
@@ -66,6 +66,8 @@ jobs:
           fi
           if [ "${{ github.event.inputs.mode }}" = "chats" ]; then
             python -m pulse.main --chats
+          elif [ "${{ github.event.inputs.mode }}" = "dry" ]; then
+            python -m pulse.main --dry-run
           elif [ "${{ github.event.inputs.force }}" = "true" ]; then
             python -m pulse.main --force
           else

@@ -408,6 +408,10 @@ class TestPipeline(unittest.TestCase):
         self.p2 = mock.patch("pulse.main.summarize", return_value=[])
         self.p1.start()
         self.p2.start()
+        # 코인게코 거래소 조회는 네트워크 → 기본은 빈 값
+        mock.patch("pulse.sources.markets.tickers", return_value=[]).start()
+        mock.patch("pulse.sources.markets.derivatives", return_value={}).start()
+        mock.patch("pulse.sources.markets.kimchi", return_value={}).start()
 
     def tearDown(self):
         mock.patch.stopall()
