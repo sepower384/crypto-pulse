@@ -6,7 +6,7 @@
   TELEGRAM_BOT_TOKEN_PULSE  이 스트림 전용 봇 토큰 (우선)
   TELEGRAM_BOT_TOKEN        공용 봇 토큰 (전용 토큰 없을 때)
   TELEGRAM_CHAT_ID          슈퍼그룹 id (-100…)
-  TELEGRAM_TOPIC_PULSE      토픽(스레드) id — 🗣️ 세력의 귀동냥
+  TELEGRAM_TOPIC_PULSE      토픽(스레드) id — 🌐 크립토마스
 토큰·채팅 id 가 없으면 조용히 건너뛴다.
 
 슬랙 mrkdwn 으로 만든 브리핑 문서를 텔레그램 HTML 로 바꾸고(slack_to_html),

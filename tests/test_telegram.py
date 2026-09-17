@@ -280,7 +280,7 @@ class TestBriefingOutput(TestPipeline):
         return main.build_message(cfg(), self.results(), st, NOW)
 
     def test_no_haeyo_endings_in_slack_or_telegram(self):
-        warm = [{"ts": str(i), "total": 100, "counts": {"BTC": 1}} for i in range(5)]
+        warm = [{"ts": str(i), "total": 100, "counts": {"BTC": 1}, "v": 2} for i in range(5)]
         for st in ({"seen": {}, "mentions": [], "trending_prev": ["BTC"]},
                    {"seen": {}, "mentions": warm, "trending_prev": ["BTC"]}):
             m = self.msg(st, summary=["비트코인 매수세가 강해 보여요", "ETF 자금 유입이 이어지고 있어요"])
@@ -307,7 +307,8 @@ class TestBriefingOutput(TestPipeline):
             self.assertNotIn("<https://", c)
             self.assertNotRegex(c, r"(?m)^&gt; ")
         full = "\n".join(chunks)
-        self.assertIn("<b>🗣️ 세력의 귀동냥 · 해외 크립토 여론</b>", full)
+        self.assertIn("<b>🌐 크립토마스 · 글로벌+국내 크립토 트렌드</b>", full)
+        self.assertNotIn("세력", full)
         self.assertIn("<blockquote>", full)
         self.assertIn("&lt;security&gt;", full)
         self.assertIn('<a href="https://example.com/201">원문 보기</a>', full)

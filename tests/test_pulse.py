@@ -219,7 +219,7 @@ class TestTrends(unittest.TestCase):
         self.assertFalse(trends.is_crypto("Trump says tariffs"))
 
     def _hist(self, n_runs, counts, total=100):
-        return [{"ts": f"r{i}", "total": total, "counts": dict(counts)} for i in range(n_runs)]
+        return [{"ts": f"r{i}", "total": total, "counts": dict(counts), "v": trends.SNAPSHOT_VERSION} for i in range(n_runs)]
 
     def test_warmup_no_surges(self):
         posts = [post(pid=str(i), text="$ZEC pumping") for i in range(10)]

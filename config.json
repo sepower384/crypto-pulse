@@ -28,8 +28,9 @@
   },
 
   "reddit": {
-    "subreddits": ["CryptoCurrency", "Bitcoin", "ethereum", "CryptoMarkets", "solana", "altcoin", "defi", "ethtrader"],
-    "top_limit": 50,
+    "subreddits": ["CryptoCurrency", "Bitcoin", "ethereum", "CryptoMarkets", "solana", "altcoin", "defi", "ethtrader",
+                   "CryptoMoonShots", "SatoshiStreetBets", "memecoins", "ethfinance", "CryptoCurrencyTrading"],
+    "top_limit": 75,
     "show_top": 5
   },
 
@@ -71,6 +72,52 @@
     {"url": "https://cryptohayes.medium.com/feed", "name": "Arthur Hayes 에세이"},
     {"url": "https://www.lynalden.com/feed/", "name": "Lyn Alden"}
   ],
+
+  "kr_community": {
+    "comment": "국내 여론. 디시 비트코인갤 최신글(100개×2쪽 ≈ 3시간치) + 코인판 추천게시물. 조회수 낮은 디시 글은 버림",
+    "dcinside": {"gallery": "bitcoins_new1", "pages": 2, "list_num": 100, "name": "디시 비트코인갤"},
+    "coinpan": true,
+    "max_age_hours": 36,
+    "dc_min_views": 150,
+    "per_source": 4,
+    "show_top": 6
+  },
+
+  "coinness": {"limit": 40, "max_age_hours": 4, "show_top": 5},
+
+  "news": {
+    "comment": "매체 RSS. 트렌드 언급량에는 안 들어가고 '매체 분석·뉴스'와 '새 체인·메인넷' 섹션에만 쓴다",
+    "max_age_hours": 12,
+    "per_outlet": 2,
+    "show_top": 6,
+    "feeds": [
+      {"url": "https://www.coindesk.com/arc/outboundfeeds/rss", "name": "CoinDesk"},
+      {"url": "https://www.theblock.co/rss.xml", "name": "The Block"},
+      {"url": "https://decrypt.co/feed", "name": "Decrypt"},
+      {"url": "https://cointelegraph.com/rss", "name": "Cointelegraph"},
+      {"url": "https://thedefiant.io/api/feed", "name": "The Defiant"},
+      {"url": "https://www.blockmedia.co.kr/feed", "name": "블록미디어", "lang": "ko"},
+      {"url": "https://www.tokenpost.kr/rss", "name": "토큰포스트", "lang": "ko"}
+    ]
+  },
+
+  "degen": {
+    "comment": "게코터미널 트렌딩 풀 + 덱스스크리너 부스트. 유동성·거래대금 기준 미달(러그·초소형)은 버림",
+    "min_liquidity_usd": 50000,
+    "min_volume_usd": 200000,
+    "max_items": 6,
+    "boosts": true,
+    "boost_items": 3
+  },
+
+  "chains": {
+    "comment": "새 체인 = 디파이라마 체인 목록·게코터미널 네트워크 목록에 처음 등장. 첫 실행은 목록만 기록",
+    "new_max_items": 5,
+    "snapshot_min_tvl": 1000000,
+    "mover_min_tvl": 5000000,
+    "mover_min_pct": 15,
+    "movers": 4
+  },
 
   "trends": {
     "history_runs": 36,

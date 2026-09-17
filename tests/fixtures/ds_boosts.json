@@ -1,0 +1,298 @@
+{
+ "boosts": [
+  {
+   "url": "https://dexscreener.com/solana/2emomqs194vxphswtcczkbgqwcubd4zcqhecoguh4ttp",
+   "chainId": "solana",
+   "tokenAddress": "2eMoMqs194VxPHSWtCCzkBGqwCUbD4ZcqhecoGuh4tTp",
+   "description": "welcum to casinu, where da boss has paws and da house always woofs.",
+   "icon": "iD3kUTq4d3N1sroh",
+   "header": "https://cdn.dexscreener.com/cms/images/RQWRxCpk_2oME1r1?width=900&height=300&fit=crop&quality=95&format=auto",
+   "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/2eMoMqs194VxPHSWtCCzkBGqwCUbD4ZcqhecoGuh4tTp?timestamp=1789647300000",
+   "links": [
+    {
+     "url": "https://thecasinu.com/"
+    },
+    {
+     "type": "twitter",
+     "url": "https://x.com/thecasinu"
+    },
+    {
+     "type": "telegram",
+     "url": "https://t.me/casinusol"
+    }
+   ],
+   "totalAmount": 600
+  },
+  {
+   "url": "https://dexscreener.com/solana/52qknpgthcjudyhkvcg6rjs4uyytjhpdrcjosdkqpump",
+   "chainId": "solana",
+   "tokenAddress": "52qkNpgTHcjuDYhKVcg6rJS4uYYtJHpDRcJoSdKqpump",
+   "description": "Paid Doge is a community-driven meme coin inspired by Dogecoin culture and Elon Musk’s influence on the crypto world.",
+   "icon": "gU4-KhRnrdKeRo3u",
+   "header": "https://cdn.dexscreener.com/cms/images/OHEh5oVpT6Bg924z?width=900&height=300&fit=crop&quality=95&format=auto",
+   "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/52qkNpgTHcjuDYhKVcg6rJS4uYYtJHpDRcJoSdKqpump?timestamp=1789647300000",
+   "links": [
+    {
+     "url": "https://paiddoge.fun"
+    },
+    {
+     "type": "twitter",
+     "url": "https://x.com/PaidDogeX"
+    },
+    {
+     "type": "telegram",
+     "url": "https://t.me/paiddoge"
+    }
+   ],
+   "totalAmount": 500
+  },
+  {
+   "url": "https://dexscreener.com/solana/3wrwk9cctfxyedmvbgyd6swstfxgbh2dgqal3z2epump",
+   "chainId": "solana",
+   "tokenAddress": "3wrwK9CctFXYedMVBGYD6sWSTfXgbh2DGQAL3z2epump",
+   "icon": "yTrcNxP4JCW-svXr",
+   "header": "https://cdn.dexscreener.com/cms/images/0kKCYMBAmDbg0cHY?width=900&height=300&fit=crop&quality=95&format=auto",
+   "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/3wrwK9CctFXYedMVBGYD6sWSTfXgbh2DGQAL3z2epump?timestamp=1789647300000",
+   "links": [
+    {
+     "type": "twitter",
+     "url": "https://x.com/fomocoinpumpfun"
+    }
+   ],
+   "totalAmount": 200
+  }
+ ],
+ "pairs": [
+  {
+   "chainId": "solana",
+   "dexId": "pumpswap",
+   "url": "https://dexscreener.com/solana/cgv97a8rm9sklfczdbm2avuua6nqe64pnbzdv7tlupsa",
+   "pairAddress": "CgV97a8rm9sKLFcZDbM2avuUA6NQE64pnBzDv7tLUPSA",
+   "baseToken": {
+    "address": "2eMoMqs194VxPHSWtCCzkBGqwCUbD4ZcqhecoGuh4tTp",
+    "name": "casinu",
+    "symbol": "casinu"
+   },
+   "quoteToken": {
+    "address": "So11111111111111111111111111111111111111112",
+    "name": "Wrapped SOL",
+    "symbol": "SOL"
+   },
+   "priceNative": "0.00000004714",
+   "priceUsd": "0.000004718",
+   "txns": {
+    "m5": {
+     "buys": 1,
+     "sells": 4
+    },
+    "h1": {
+     "buys": 117,
+     "sells": 27
+    },
+    "h6": {
+     "buys": 2101,
+     "sells": 136
+    },
+    "h24": {
+     "buys": 17576,
+     "sells": 8308
+    }
+   },
+   "volume": {
+    "h24": 1253818.35,
+    "h6": 6042.33,
+    "h1": 1308.16,
+    "m5": 32.15
+   },
+   "priceChange": {
+    "m5": -2.31,
+    "h1": -38.22,
+    "h6": -98.46,
+    "h24": -88.05
+   },
+   "liquidity": {
+    "usd": 4429.56,
+    "base": 651949102,
+    "quote": 13.5257
+   },
+   "fdv": 4536,
+   "marketCap": 4536,
+   "pairCreatedAt": 1789582867000,
+   "info": {
+    "imageUrl": "https://cdn.dexscreener.com/cms/images/iD3kUTq4d3N1sroh?width=800&height=800&quality=95&format=auto",
+    "header": "https://cdn.dexscreener.com/cms/images/RQWRxCpk_2oME1r1?width=1500&height=500&quality=95&format=auto",
+    "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/2eMoMqs194VxPHSWtCCzkBGqwCUbD4ZcqhecoGuh4tTp?timestamp=1789647300000",
+    "websites": [
+     {
+      "url": "https://thecasinu.com/",
+      "label": "Website"
+     }
+    ],
+    "socials": [
+     {
+      "url": "https://x.com/thecasinu",
+      "type": "twitter"
+     },
+     {
+      "url": "https://t.me/casinusol",
+      "type": "telegram"
+     }
+    ]
+   },
+   "boosts": {
+    "active": 600
+   }
+  },
+  {
+   "chainId": "solana",
+   "dexId": "pumpswap",
+   "url": "https://dexscreener.com/solana/bs7ad8ehzb4njfcsnewodg2yulxrvdnplu4wgkjj2sqj",
+   "pairAddress": "Bs7Ad8EhZb4NjfcsnewodG2yULXrvdNpLU4wgKJJ2sqj",
+   "baseToken": {
+    "address": "52qkNpgTHcjuDYhKVcg6rJS4uYYtJHpDRcJoSdKqpump",
+    "name": "Paid Doge",
+    "symbol": "PAIDDOGE"
+   },
+   "quoteToken": {
+    "address": "So11111111111111111111111111111111111111112",
+    "name": "Wrapped SOL",
+    "symbol": "SOL"
+   },
+   "priceNative": "0.000009276",
+   "priceUsd": "0.0009329",
+   "txns": {
+    "m5": {
+     "buys": 461,
+     "sells": 252
+    },
+    "h1": {
+     "buys": 5100,
+     "sells": 3232
+    },
+    "h6": {
+     "buys": 35499,
+     "sells": 21501
+    },
+    "h24": {
+     "buys": 109368,
+     "sells": 70269
+    }
+   },
+   "volume": {
+    "h24": 4616146.95,
+    "h6": 738390.47,
+    "h1": 130693.26,
+    "m5": 14979.38
+   },
+   "priceChange": {
+    "m5": -4.97,
+    "h1": -6.83,
+    "h6": -13.52,
+    "h24": 644
+   },
+   "liquidity": {
+    "usd": 90163.67,
+    "base": 49316420,
+    "quote": 438.9734
+   },
+   "fdv": 928826,
+   "marketCap": 928826,
+   "pairCreatedAt": 1789583060000,
+   "info": {
+    "imageUrl": "https://cdn.dexscreener.com/cms/images/gU4-KhRnrdKeRo3u?width=800&height=800&quality=95&format=auto",
+    "header": "https://cdn.dexscreener.com/cms/images/OHEh5oVpT6Bg924z?width=1500&height=500&quality=95&format=auto",
+    "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/52qkNpgTHcjuDYhKVcg6rJS4uYYtJHpDRcJoSdKqpump?timestamp=1789647300000",
+    "websites": [
+     {
+      "url": "https://paiddoge.fun",
+      "label": "Website"
+     }
+    ],
+    "socials": [
+     {
+      "url": "https://x.com/PaidDogeX",
+      "type": "twitter"
+     },
+     {
+      "url": "https://t.me/paiddoge",
+      "type": "telegram"
+     }
+    ]
+   },
+   "boosts": {
+    "active": 500
+   }
+  },
+  {
+   "chainId": "solana",
+   "dexId": "pumpswap",
+   "url": "https://dexscreener.com/solana/2hfevbebaluylba7eaqcmgpbmbcmwnn6kjwjicly7osr",
+   "pairAddress": "2HfEvBEBALUyLbA7eaQcMGpBmBcMwNn6KJWjiCLy7oSr",
+   "baseToken": {
+    "address": "3wrwK9CctFXYedMVBGYD6sWSTfXgbh2DGQAL3z2epump",
+    "name": "fomocoin",
+    "symbol": "fomocoin"
+   },
+   "quoteToken": {
+    "address": "So11111111111111111111111111111111111111112",
+    "name": "Wrapped SOL",
+    "symbol": "SOL"
+   },
+   "priceNative": "0.000001905",
+   "priceUsd": "0.0001907",
+   "txns": {
+    "m5": {
+     "buys": 32,
+     "sells": 40
+    },
+    "h1": {
+     "buys": 445,
+     "sells": 427
+    },
+    "h6": {
+     "buys": 2789,
+     "sells": 3345
+    },
+    "h24": {
+     "buys": 2789,
+     "sells": 3345
+    }
+   },
+   "volume": {
+    "h24": 185217.51,
+    "h6": 185217.51,
+    "h1": 22415.26,
+    "m5": 1696.16
+   },
+   "priceChange": {
+    "m5": -4.6,
+    "h1": 19.75,
+    "h6": 364,
+    "h24": 364
+   },
+   "liquidity": {
+    "usd": 35367.41,
+    "base": 96790699,
+    "quote": 168.9113
+   },
+   "fdv": 184758,
+   "marketCap": 184758,
+   "pairCreatedAt": 1789625727000,
+   "info": {
+    "imageUrl": "https://cdn.dexscreener.com/cms/images/yTrcNxP4JCW-svXr?width=800&height=800&quality=95&format=auto",
+    "header": "https://cdn.dexscreener.com/cms/images/0kKCYMBAmDbg0cHY?width=1500&height=500&quality=95&format=auto",
+    "openGraph": "https://cdn.dexscreener.com/token-images/og/solana/3wrwK9CctFXYedMVBGYD6sWSTfXgbh2DGQAL3z2epump?timestamp=1789647300000",
+    "websites": [],
+    "socials": [
+     {
+      "url": "https://x.com/fomocoinpumpfun",
+      "type": "twitter"
+     }
+    ]
+   },
+   "boosts": {
+    "active": 200
+   }
+  }
+ ]
+}
