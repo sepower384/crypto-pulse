@@ -183,7 +183,7 @@ def build_message(cfg, results, st, now):
     kst = now + timedelta(hours=cfg.get("timezone_offset_hours", 9))
     stamp = f"{kst.month}월 {kst.day}일 {kst:%H:%M}"
     doc = [{"kind": "header", "text": f"🌐 {BOT_NAME} · {stamp}",
-            "tg_title": f"{TG_TOPIC} · 오늘의 코인 시장 이야기", "tg_sub": f"{stamp} 기준"},
+            "tg_hide": True},
            {"kind": "text", "text": "_안녕하세요, 크립토마스입니다. 해외·국내 코인 커뮤니티와 뉴스, 블록체인 거래 기록까지 "
                                     "두루 살펴서 지금 사람들의 관심과 돈이 어디로 모이는지 정리해 드립니다. "
                                     "해외 글은 자동 번역이라 표현이 조금 어색할 수 있고, 여기 나온 코인은 추천이 아니라 "

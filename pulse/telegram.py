@@ -136,6 +136,8 @@ def render(doc):
     for d in doc:
         kind = d["kind"]
         if kind == "header":
+            if d.get("tg_hide"):  # 텔레그램은 봇 이름이 이미 보이므로 제목·시각 줄을 생략
+                continue
             head = f"<b>{esc(d.get('tg_title') or d['text'])}</b>"
             if d.get("tg_sub"):
                 head += f"\n<i>{esc(d['tg_sub'])}</i>"
