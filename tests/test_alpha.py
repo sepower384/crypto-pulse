@@ -187,6 +187,44 @@ class TestPicks(unittest.TestCase):
         self.assertEqual(dict(top), {"JPYC": 1, "BTC": 1, "XRP": 1})
         self.assertEqual(total, 5)
 
+    def test_airdrop_pick(self):
+        base = {"category": "Dexs", "chains": ["Base"], "change_30d": 10.0, "listed_at": None, "url": "u",
+                "twitter": "", "slug": "s", "product": ""}
+        tokenless = [{**base, "name": "Zeta Farm", "tvl": 5e7, "change_7d": 60.0},
+                     {**base, "name": "Slowpoke", "tvl": 5e7, "change_7d": -10.0},
+                     {**base, "name": "Coinbase Vault", "tvl": 9e9, "change_7d": 90.0},
+                     {**base, "name": "Polymarket", "tvl": 3e8, "change_7d": -5.0},
+                     {**base, "name": "Seen Before", "tvl": 9e8, "change_7d": 50.0}]
+        posts = [post(source="reddit", pid="a", text="Zeta Farm airdrop season 2 is live, farming now"),
+                 post(source="news", pid="b", text="Polymarket odds rose 5 percentage points today")]
+        c = cfg()
+        c["airdrop"] = {**c["airdrop"], "watch": ["Polymarket"], "max_items": 3}
+        got = alpha.airdrop_pick(tokenless, posts, c, NOW, {"Seen Before": (NOW - timedelta(hours=3)).isoformat()})
+        names = [d["name"] for d in got]
+        self.assertEqual(names[0], "Zeta Farm")
+        self.assertNotIn("Coinbase Vault", names)
+        self.assertNotIn("Seen Before", names)
+        self.assertEqual(got[0]["mentions"], 1)
+        poly = [d for d in got if d["name"] == "Polymarket"][0]
+        self.assertTrue(poly["watch"])
+        self.assertEqual(poly["mentions"], 0)
+
+    def test_tokenless_parse(self):
+        data = {"parentProtocols": [{"id": "parent#tok", "name": "Tok", "symbol": "TOK"},
+                                    {"id": "parent#free", "name": "Free", "symbol": "-", "twitter": "free"}],
+                "protocols": [
+                    {"name": "Tok V2", "symbol": "-", "parentProtocol": "parent#tok", "category": "Dexs", "tvl": 5e7},
+                    {"name": "Free A", "symbol": "-", "parentProtocol": "parent#free", "category": "Dexs", "tvl": 3e7,
+                     "tvlPrevWeek": 2e7, "chains": ["Base"]},
+                    {"name": "Free B", "symbol": "-", "parentProtocol": "parent#free", "category": "Lending", "tvl": 2e7},
+                    {"name": "Bridge X", "symbol": "-", "category": "Bridge", "tvl": 9e9},
+                    {"name": "Tiny", "symbol": "-", "category": "Dexs", "tvl": 1e5}]}
+        rows = onchain.parse_tokenless(data)
+        self.assertEqual([r["name"] for r in rows], ["Free"])
+        self.assertEqual(rows[0]["tvl"], 5e7)
+        self.assertEqual(rows[0]["slug"], "free")
+        self.assertEqual(rows[0]["twitter"], "free")
+
     def test_news_pick_per_outlet(self):
         posts = [post(source="news", pid=f"n{i}", author="Decrypt", handle="Decrypt", text=f"Bitcoin analysis {i}",
                       extra={"title": f"Bitcoin analysis {i}"}) for i in range(4)]
@@ -214,7 +252,10 @@ class TestPipelineAlpha(TestPipeline):
                 "trending_pools": pools, "boosted": [],
                 "llama_chains": [{"name": "Ethereum", "tvl": 5e10, "token": "ETH", "gecko_id": "ethereum", "chain_id": 1},
                                  {"name": "Megachain", "tvl": 3.2e7, "token": "MEGA", "gecko_id": None, "chain_id": 777}],
-                "gt_networks": [{"id": "eth", "name": "Ethereum", "cg_platform": None}]}),
+                "gt_networks": [{"id": "eth", "name": "Ethereum", "cg_platform": None}],
+                "tokenless": [{"name": "Zeta Farm", "product": "Zeta", "category": "Dexs", "chains": ["Base"],
+                               "tvl": 5e7, "change_7d": 40.0, "change_30d": 80.0, "listed_at": None,
+                               "url": "https://zeta.example", "twitter": "zeta", "slug": "zeta-farm"}]}),
         ]
 
     def setUp(self):
@@ -239,6 +280,8 @@ class TestPipelineAlpha(TestPipeline):
         self.assertIn("🟢 업비트 상장", text)
         self.assertIn("호재 5 · 악재 1", text)
         self.assertIn("국내 커뮤니티 핫글", text)
+        self.assertIn("🪂 에어드랍 파밍 레이더", text)
+        self.assertIn("*Zeta Farm*", text)
         self.assertIn("국내 커뮤니티에서 많이 나온 코인", text)
         self.assertEqual([c["name"] for c in msg["new_chains"]], ["Megachain"])
         self.assertIn("llama:Megachain", msg["chain_updates"])
@@ -269,6 +312,7 @@ class TestPipelineAlpha(TestPipeline):
                 self.assertIn("dcinside:bitcoins_new1/1", st["seen"])
                 self.assertIn("news:m1", st["seen"])
                 self.assertNotEqual(st["degen_prev"], ["x"])
+                self.assertIn("Zeta Farm", st["airdrop_shown"])
 
 
 if __name__ == "__main__":

@@ -110,6 +110,17 @@
     "boost_items": 3
   },
 
+  "airdrop": {
+    "comment": "디파이라마에서 토큰 없는(본인·상위 모두) 파밍형 프로토콜 → TVL·유입속도·에어드랍 언급으로 점수. 거래소·기관 상품 제외. watch 는 디젠들이 주목하는 대형 프리토큰(토큰 나오면 자동으로 빠짐). 같은 곳은 repeat_hours 동안 다시 안 보냄",
+    "enabled": true,
+    "min_tvl_usd": 10000000,
+    "max_items": 5,
+    "repeat_hours": 24,
+    "watch": ["Polymarket", "MetaMask", "OpenSea", "Phantom", "Rabby", "Backpack", "Farcaster", "Base",
+              "Katana", "Symbiotic", "Morpho", "Kamino", "Lighter", "Variational", "Paradex", "Extended",
+              "Ostium", "Hyperbeat", "Felix", "Kinetiq", "Rainbow", "Nansen", "Jupiter Lend", "Drift"]
+  },
+
   "chains": {
     "comment": "새 체인 = 디파이라마 체인 목록·게코터미널 네트워크 목록에 처음 등장. 첫 실행은 목록만 기록",
     "new_max_items": 5,

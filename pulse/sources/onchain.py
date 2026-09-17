@@ -5,16 +5,24 @@
 - 디파이라마 v2/chains: 체인별 예치금(TVL) — 새 체인 등장·TVL 급증 감지용
 - 게코터미널 networks: DEX 가 붙은 체인 목록(3페이지 ≈ 250개) — 디파이라마보다 새 체인이 빨리 뜬다
 """
+import re
 from datetime import datetime, timezone
 
-from ..feeds import parse_date
+from ..feeds import parse_date, parse_feed
 from ..model import SourceResult
-from ..net import fetch_json
+from ..net import fetch_json, fetch_text
 
 GT = "https://api.geckoterminal.com/api/v2"
 LLAMA_CHAINS = "https://api.llama.fi/v2/chains"
 DS_BOOSTS = "https://api.dexscreener.com/token-boosts/top/v1"
 DS_TOKENS = "https://api.dexscreener.com/tokens/v1/{chain}/{addrs}"
+LLAMA_PROTOCOLS = "https://api.llama.fi/lite/protocols2?b=2"   # ≈7MB, 프로토콜 8천여 개
+AIRDROP_GUIDES = "https://airdrops.io/feed/"
+# 에어드랍 기대가 없는 유형(브리지·거래소·기관 상품·체인 자체 등)
+NO_AIRDROP_CATEGORIES = {"Bridge", "Canonical Bridge", "CEX", "Chain", "Risk Curators", "Onchain Capital Allocator",
+                         "Liquid Staking", "RWA", "Treasury Manager", "Services", "Staking Pool", "Payments",
+                         "Bug Bounty", "Developer Tools", "Wallets", "Stablecoin Wrapper", "Stablecoin Issuer",
+                         "Cross Chain Bridge", "CeDeFi", "Exchange Custody", "Anchor BTC"}
 
 
 def _f(v):
@@ -98,6 +106,44 @@ def parse_gt_networks(data):
             for n in (data or {}).get("data", []) if n.get("id")]
 
 
+def parse_tokenless(data, min_tvl=10_000_000):
+    """디파이라마 전체 프로토콜 → 아직 토큰이 없는(본인·상위 프로토콜 모두) 파밍형 프로토콜."""
+    parents = {p.get("id"): p for p in (data or {}).get("parentProtocols", [])}
+    out = []
+    for p in (data or {}).get("protocols", []):
+        if p.get("symbol") not in (None, "", "-") or p.get("deprecated"):
+            continue
+        par = parents.get(p.get("parentProtocol") or "")
+        if par and par.get("symbol") not in (None, "", "-"):
+            continue
+        if p.get("category") in NO_AIRDROP_CATEGORIES:
+            continue
+        tvl = _f(p.get("tvl")) or 0
+        if tvl < min_tvl:
+            continue
+        w, m = _f(p.get("tvlPrevWeek")), _f(p.get("tvlPrevMonth"))
+        out.append({"name": (par or {}).get("name") if par else p.get("name", ""), "product": p.get("name", ""),
+                    "category": p.get("category") or "", "chains": (p.get("chains") or [])[:4], "tvl": tvl,
+                    "change_7d": round((tvl / w - 1) * 100, 1) if w else None,
+                    "change_30d": round((tvl / m - 1) * 100, 1) if m else None,
+                    "listed_at": p.get("listedAt"), "url": p.get("url") or (par or {}).get("url") or "",
+                    "twitter": (par or {}).get("twitter") or p.get("twitter") or "",
+                    "slug": (par["id"].split("#", 1)[-1] if par else
+                             re.sub(r"[^a-z0-9]+", "-", p.get("name", "").lower()).strip("-"))})
+    # 같은 상위 프로토콜의 여러 제품은 TVL 합쳐 하나로
+    merged = {}
+    for r in out:
+        m = merged.get(r["name"])
+        if not m:
+            merged[r["name"]] = dict(r)
+        else:
+            m["tvl"] += r["tvl"]
+            m["chains"] = list(dict.fromkeys(m["chains"] + r["chains"]))[:4]
+            if (r["change_7d"] or -1e9) > (m["change_7d"] or -1e9):
+                m["change_7d"], m["change_30d"] = r["change_7d"], r["change_30d"]
+    return list(merged.values())
+
+
 def network_pools(network_id, limit=3):
     """새 체인 자료용: 그 체인의 상위 풀 몇 개 (이름·24h 거래대금). 실패하면 []."""
     try:
@@ -129,7 +175,8 @@ def _boosted():
 
 
 def collect(cfg):
-    extra = {"trending_pools": [], "boosted": [], "llama_chains": [], "gt_networks": []}
+    extra = {"trending_pools": [], "boosted": [], "llama_chains": [], "gt_networks": [], "tokenless": [],
+             "airdrop_guides": []}
     notes, fails = [], []
     try:
         extra["trending_pools"] = parse_trending(
@@ -148,6 +195,21 @@ def collect(cfg):
         notes.append(f"체인 {len(extra['llama_chains'])}")
     except Exception as e:  # noqa: BLE001
         fails.append(f"디파이라마({type(e).__name__})")
+    acfg = cfg.get("airdrop", {})
+    if acfg.get("enabled", True):
+        try:
+            extra["tokenless"] = parse_tokenless(fetch_json(LLAMA_PROTOCOLS, retries=1, timeout=90),
+                                                 acfg.get("min_tvl_usd", 10_000_000))
+            notes.append(f"토큰없는 프로토콜 {len(extra['tokenless'])}")
+        except Exception as e:  # noqa: BLE001
+            fails.append(f"디파이라마 프로토콜({type(e).__name__})")
+        try:
+            extra["airdrop_guides"] = [
+                {"title": it["title"], "url": it["link"],
+                 "published": it["published"].isoformat() if it["published"] else None}
+                for it in parse_feed(fetch_text(AIRDROP_GUIDES, retries=1))[:15]]
+        except Exception as e:  # noqa: BLE001
+            fails.append(f"airdrops.io({type(e).__name__})")
     nets, page = [], 1
     try:
         while page <= 5:

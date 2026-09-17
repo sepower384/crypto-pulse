@@ -271,3 +271,62 @@ def news_pick(posts, seen, cfg, now, exclude=()):
         if len(out) >= ncfg.get("show_top", 6):
             break
     return out
+
+
+# ------------------------------------------------------------------ 에어드랍
+AIRDROP_WORDS = re.compile(r"airdrop|points? (?:program|farming|campaign|system)|earn(?:ing)? points|"
+                           r"\bfarming\b|season \d|\bTGE\b|에어드[랍롭]|포인트 (?:파밍|프로그램)|파밍", re.I)
+INSTITUTION = re.compile(r"binance|coinbase|okx|bybit|bitget|kraken|robinhood|blackrock|fidelity|franklin|"
+                         r"bitwise|circle|usdd|superstate|wisdomtree|janus|apollo|hamilton lane|securitize|"
+                         r"anchorage|paxos|gemini|crypto\.com|upbit|bithumb", re.I)
+
+
+def _name_rx(name):
+    # 흔한 영어 단어 이름(Current·Noon…)은 대소문자를 맞춰야만 인정
+    flags = 0 if name.istitle() and len(name) <= 7 else re.I
+    return re.compile(r"(?<![A-Za-z0-9])" + re.escape(name) + r"(?![A-Za-z0-9])", flags)
+
+
+def _near(rx, text, span=150):
+    """이름 바로 근처(앞뒤 150자)에 에어드랍 단어가 있어야 '에어드랍 이야기'로 친다."""
+    for m in rx.finditer(text):
+        if AIRDROP_WORDS.search(text[max(0, m.start() - span):m.end() + span]):
+            return True
+    return False
+
+
+def airdrop_pick(tokenless, posts, cfg, now, shown=None):
+    """토큰 없는 프로토콜 중 에어드랍 후보: TVL 규모·유입 속도·커뮤니티 에어드랍 언급·관심 목록."""
+    acfg = cfg.get("airdrop", {})
+    watch = {w.lower() for w in acfg.get("watch", [])}
+    repeat = timedelta(hours=acfg.get("repeat_hours", 24))
+    talk = [p for p in posts if AIRDROP_WORDS.search(p.text or "")]
+    cands = []
+    for t in tokenless:
+        name = t["name"] or ""
+        if INSTITUTION.search(name) or INSTITUTION.search(t.get("product") or ""):
+            continue
+        last = _ts((shown or {}).get(name))
+        if last and now - last < repeat:
+            continue
+        rx = _name_rx(name) if len(_key(name)) >= 4 else None
+        hits = [p for p in talk if rx and _near(rx, p.text or "")]
+        c7 = max(min(t["change_7d"] or 0, 150), -50)
+        c30 = max(min(t["change_30d"] or 0, 300), -50)
+        s = math.log10(max(t["tvl"], 1)) * 6 + c7 * 0.35 + c30 * 0.1 + min(len(hits), 5) * 8
+        if name.lower() in watch:
+            s += 15
+        if t.get("listed_at") and now.timestamp() - t["listed_at"] < 120 * 86400:
+            s += 6  # 최근 등록 = 초기 파밍 구간
+        cands.append((s, {**t, "mentions": len(hits), "hits": hits[:2], "watch": name.lower() in watch}))
+    cands.sort(key=lambda x: x[0], reverse=True)
+    return [c for _, c in cands[:acfg.get("max_items", 5)]]
+
+
+def airdrop_guides(guides, now, max_days=21, limit=2):
+    out = []
+    for g in guides or []:
+        t = _ts(g.get("published"))
+        if t and now - t <= timedelta(days=max_days):
+            out.append(g)
+    return out[:limit]

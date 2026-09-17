@@ -169,6 +169,9 @@ def build_message(cfg, results, st, now):
     flash = alpha.coinness_pick(posts, seen, cfg, now)
     kr = alpha.kr_hot(posts, seen, cfg, now)
     media = alpha.news_pick(posts, seen, cfg, now, exclude=launches)
+    drops = alpha.airdrop_pick(_extra(by_name, "onchain", "tokenless", []), posts, cfg, now, st.get("airdrop_shown", {}))
+    guides = [g_ for g_ in alpha.airdrop_guides(_extra(by_name, "onchain", "airdrop_guides", []), now)
+              if g_["url"] not in seen]
     g = wording.Glossary()  # 어려운 단어는 이 브리핑에서 처음 나올 때 한 번만 풀어 준다 → 메시지 순서대로 호출
 
     kst = now + timedelta(hours=cfg.get("timezone_offset_hours", 9))
@@ -187,6 +190,7 @@ def build_message(cfg, results, st, now):
     lines += [f"[국내 속보] {p.extra.get('title', '')}" for p in flash]
     lines += [f"[매체] {p.author}: {p.extra.get('title', '')}" for p in media + launches]
     lines += [f"[새 체인] {c['name']}" for c in new_chains]
+    lines += [f"[에어드랍 후보] {d['name']} ({d['category']}) TVL {usd(d['tvl'])} 7일 {pct(d['change_7d'])}" for d in drops]
     lines += [f"[온체인 핫토큰] {t['symbol']}({t['chain']}) 24h {pct(t['change_24h'])} 거래대금 {usd(t['volume_24h'])}"
               for t in hot]
     summary = summarize(lines)
@@ -251,6 +255,17 @@ def build_message(cfg, results, st, now):
             d_lines.append("💸 *돈 내고 광고(부스트) 중인 토큰* — 유동성 기준은 통과했지만 광고빨일 수 있어 조심해서 보시는 것이 좋습니다")
             d_lines += [degen_line(t, False, g) for t in shill]
         doc.append({"kind": "section", "title": "🎰 디젠 레이더 — 온체인에서 지금 돈 몰리는 토큰", "lines": d_lines})
+
+    # 에어드랍 파밍
+    if drops or guides:
+        doc.append({"kind": "divider"})
+        a_lines = [airdrop_line(d, g) for d in drops]
+        for gd in guides:
+            a_lines.append(f"📚 파밍 가이드: {slack.link(gd['url'], ' '.join(to_korean(gd['title'], 200).split())[:90])}"
+                           " _(airdrops.io)_")
+        a_lines.append("_토큰이 아직 없는데 돈이 몰리는 곳을 골랐습니다. 에어드랍은 확정이 아니고, "
+                       "예치 전 공식 링크·컨트랙트 확인은 필수입니다._")
+        doc.append({"kind": "section", "title": "🪂 에어드랍 파밍 레이더 — 토큰 없는데 돈 몰리는 곳", "lines": a_lines})
 
     # 국내 거래소 공지·속보
     kn_lines = []
@@ -329,10 +344,11 @@ def build_message(cfg, results, st, now):
     alpha.scrub_doc(doc)
     fresh_degen = [t for t in hot if t["key"] not in degen_prev]
     has_news = bool(picks or news or rtop or tr["surges"] or new_trending or new_chains or movers or launches
-                    or upbit or flash or kr or media or fresh_degen)
+                    or upbit or flash or kr or media or fresh_degen or drops)
     return {"doc": doc, "blocks": slack.blocks_from_doc(doc), "has_news": has_news, "trends": tr, "picks": picks,
             "news": news, "reddit": rtop, "trending": trending, "photo": pick_photo(tr, trending, stamp, cfg),
-            "extra_seen": launches + upbit + flash + kr + media,
+            "extra_seen": launches + upbit + flash + kr + media, "drops": drops,
+            "guide_urls": [g_["url"] for g_ in guides],
             "chain_updates": chain_updates, "new_chains": new_chains, "movers": movers, "hot": hot,
             "tvl_snapshot": alpha.tvl_snapshot(llama, cfg.get("chains", {}).get("snapshot_min_tvl", 1_000_000)),
             "fallback": f"{BOT_NAME} {kst:%m/%d %H:%M} — 새 체인 {len(new_chains)} · 핫토큰 {len(hot)} · "
@@ -368,6 +384,28 @@ def chain_line(c, posts, g):
         line += f"\n      화제: 수집한 글 {n}건에서 언급 — " + " / ".join(slack.link(p.url, _head(p, 60)) for p in hits)
     else:
         line += "\n      _아직 뉴스·커뮤니티 언급은 없습니다. 초기 단계로 보입니다._"
+    return line
+
+
+def airdrop_line(d, g):
+    bits = [slack.esc(d["category"]), f"{g.explain('TVL')} {usd(d['tvl'])}"]
+    if d.get("change_7d") is not None:
+        bits.append(f"7일 *{pct(d['change_7d'])}*")
+    if d.get("change_30d") is not None:
+        bits.append(f"30일 {pct(d['change_30d'])}")
+    if d.get("chains"):
+        bits.append("체인 " + "·".join(slack.esc(c) for c in d["chains"][:3]))
+    links = []
+    if d.get("url"):
+        links.append(slack.link(d["url"], "공식"))
+    links.append(slack.link(f"https://defillama.com/protocol/{d['slug']}", "디파이라마"))
+    if d.get("twitter"):
+        links.append(slack.link(f"https://x.com/{d['twitter']}", "X"))
+    tag = " ⭐ _디젠 관심 목록_" if d.get("watch") else ""
+    line = f"🪂 *{slack.esc(d['name'])}*{tag} — " + " · ".join(bits) + "\n      자료: " + " · ".join(links)
+    if d.get("mentions"):
+        line += f"\n      화제: 에어드랍·포인트 이야기 {d['mentions']}건 — " + " / ".join(
+            slack.link(p.url, _head(p, 60)) for p in d["hits"])
     return line
 
 
@@ -468,6 +506,12 @@ def run(dry_run=False, force=False, cfg=None, now=None):
         st.setdefault("chains_known", {}).update(msg["chain_updates"])
     if msg["tvl_snapshot"]:
         st["chain_tvl"] = (st.get("chain_tvl", []) + [{"ts": now.isoformat(), "tvl": msg["tvl_snapshot"]}])[-20:]
+    if sent:
+        shown = st.setdefault("airdrop_shown", {})
+        shown.update({d["name"]: now.isoformat() for d in msg["drops"]})
+        cutoff = (now - timedelta(days=14)).isoformat()
+        st["airdrop_shown"] = {k: v for k, v in shown.items() if v >= cutoff}
+        st["seen"].update({u: now.isoformat() for u in msg["guide_urls"]})
     if msg["hot"] and (sent or not attempted):
         st["degen_prev"] = [t["key"] for t in msg["hot"]]
     st["mentions"].append({"ts": now.isoformat(), **msg["trends"]["snapshot"]})
