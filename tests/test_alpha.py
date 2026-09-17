@@ -229,7 +229,7 @@ class TestPicks(unittest.TestCase):
         det = {"raises": [{"lead": ["Paradigm"], "others": ["A", "B", "C"]}], "total_raised": 12.0, "audits": 1}
         r = alpha.airdrop_reasons(d, det, ["Arc"], NOW)
         self.assertEqual(len(r), 4)
-        self.assertEqual(r[0], "투자 유치 $12.0M(Paradigm, A, B 등)")
+        self.assertEqual(r[0], "투자금 약 1,200만 달러 유치(투자사: Paradigm, A, B 등)")
 
     def test_tokenless_parse(self):
         data = {"parentProtocols": [{"id": "parent#tok", "name": "Tok", "symbol": "TOK"},
@@ -298,21 +298,23 @@ class TestPipelineAlpha(TestPipeline):
         text = main.slack_text(msg["blocks"])
         self.assertNotIn("세력", text)
         self.assertIn("크립토마스", text)
-        self.assertIn("🆕 새 체인·메인넷 알파", text)
+        self.assertIn("🆕 새로 나온 블록체인·출시 소식", text)
         self.assertIn("*Megachain*", text)
-        self.assertIn("토큰 MEGA", text)
+        self.assertIn("• 맡겨진 돈: 약 3,200만 달러", text)
+        self.assertIn("• 대표 코인: MEGA", text)
         self.assertIn("defillama.com/chain/Megachain", text)
-        self.assertIn("화제: 수집한 글 1건", text)
-        self.assertIn("🎰 디젠 레이더", text)
-        self.assertIn("🟢 업비트 상장", text)
-        self.assertIn("호재 5 · 악재 1", text)
-        self.assertIn("국내 커뮤니티 핫글", text)
-        self.assertIn("🪂 에어드랍 파밍 레이더", text)
+        self.assertIn("• 관련 글 1건", text)
+        self.assertIn("🎰 지금 뜨는 코인", text)
+        self.assertIn("🟢 업비트 신규 상장", text)
+        self.assertIn("호재라는 표 5 · 악재라는 표 1", text)
+        self.assertIn("국내 커뮤니티 인기 글", text)
+        self.assertIn("🪂 에어드랍이 기대되는 프로젝트", text)
         self.assertIn("*1. Zeta Farm*", text)
-        self.assertIn("• 체인: Base", text)
+        self.assertIn("• 블록체인: 베이스", text)
         self.assertIn("• 분야: 탈중앙 거래소", text)
-        self.assertIn("투자 유치 $5.0M(Paradigm)", text)
-        self.assertIn("• 에어드랍 시 예상: $1,000 예치 → 약 *$48* (예치금의 4.8%) · 보수 $6 ~ 낙관 $150", text)
+        self.assertIn("투자금 약 500만 달러 유치(투자사: Paradigm)", text)
+        self.assertIn("• 에어드랍이 나온다면: 1,000달러를 맡겼을 때 약 *48달러* (맡긴 돈의 4.8%) 정도로 예상됩니다. "
+                      "적게는 6달러, 많게는 150달러까지 볼 수 있습니다.", text)
         self.assertIn("국내 커뮤니티에서 많이 나온 코인", text)
         self.assertEqual([c["name"] for c in msg["new_chains"]], ["Megachain"])
         self.assertIn("llama:Megachain", msg["chain_updates"])
@@ -348,3 +350,17 @@ class TestPipelineAlpha(TestPipeline):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestFriendly(unittest.TestCase):
+    def test_korean_units_and_names(self):
+        from pulse import friendly as fr
+        self.assertEqual(fr.dollars(85_700_000), "약 8,570만 달러")
+        self.assertEqual(fr.dollars(1.2e9), "약 12억 달러")
+        self.assertEqual(fr.dollars(4.4e8), "약 4.4억 달러")
+        self.assertEqual(fr.dollars(5300), "약 5,300달러")
+        self.assertEqual(fr.count(12000), "1.2만")
+        self.assertEqual(fr.count(1700), "1,700")
+        self.assertEqual(fr.chains(["Solana", "Base", "Unknown"]), "솔라나 · 베이스 · Unknown")
+        self.assertEqual(fr.subreddit("r/memecoins"), "밈코인 게시판")
+        self.assertEqual(fr.ko_terms("A new DeFi DEX on L2 with TVL"), "A new 디파이 탈중앙 거래소 on 레이어2 with 예치금")

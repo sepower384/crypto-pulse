@@ -289,7 +289,7 @@ class TestBriefingOutput(TestPipeline):
             for txt in (slack_txt, tg_txt, m["photo"]["caption"] if m["photo"] else ""):
                 self.assertIsNone(wording.HAEYO.search(txt), wording.HAEYO.search(txt) and txt)
             self.assertIn("습니다", slack_txt + tg_txt)
-            self.assertIn("정리했습니다", slack_txt)
+            self.assertIn("정리해 드립니다", slack_txt)
 
     def test_glossary_applied_once_per_briefing(self):
         m = self.msg(summary=["스테이블코인 USDC 수요가 늘었습니다", "스테이블코인 발행량이 사상 최대입니다"])
@@ -307,7 +307,7 @@ class TestBriefingOutput(TestPipeline):
             self.assertNotIn("<https://", c)
             self.assertNotRegex(c, r"(?m)^&gt; ")
         full = "\n".join(chunks)
-        self.assertIn("<b>🌐 크립토마스 · 글로벌+국내 크립토 트렌드</b>", full)
+        self.assertIn("<b>🌐 크립토마스 · 오늘의 코인 시장 이야기</b>", full)
         self.assertNotIn("세력", full)
         self.assertIn("<blockquote>", full)
         self.assertIn("&lt;security&gt;", full)

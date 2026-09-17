@@ -9,6 +9,7 @@ import math
 import re
 from datetime import datetime, timedelta
 
+from . import friendly as fr
 from .insights import _norm
 from .trends import extract, is_crypto
 
@@ -341,31 +342,31 @@ def airdrop_estimate(d, ratios, deposit=1000):
 
 
 def airdrop_reasons(d, detail, hot_chains=(), now=None):
-    """'괜찮은 이유' — 데이터로 확인되는 것만, 최대 4개."""
+    """'눈여겨볼 이유' — 데이터로 확인되는 것만, 최대 4개."""
     out = []
     raises = (detail or {}).get("raises") or []
     if raises:
         vcs = list(dict.fromkeys(v for r in raises for v in r["lead"] + r["others"]))
         total = detail.get("total_raised") or 0
-        head = f"투자 유치 ${total:,.1f}M" if total else "투자 유치"
-        out.append(head + (f"({', '.join(vcs[:3])}{' 등' if len(vcs) > 3 else ''})" if vcs else ""))
+        head = f"투자금 {fr.dollars(total * 1e6)} 유치" if total else "투자 유치"
+        out.append(head + (f"(투자사: {', '.join(vcs[:3])}{' 등' if len(vcs) > 3 else ''})" if vcs else ""))
     if (d.get("tvl") or 0) >= 1e8:
-        out.append("예치금 1억 달러 이상으로 이미 큰돈이 들어와 있음")
+        out.append("맡겨진 돈이 1억 달러가 넘어 이미 큰돈이 들어와 있음")
     if (d.get("change_7d") or 0) >= 15:
-        out.append(f"최근 7일 자금 {d['change_7d']:+.0f}% 유입 중")
+        out.append(f"일주일 새 맡겨진 돈 {d['change_7d']:+.0f}% 증가")
     elif (d.get("change_30d") or 0) >= 50:
-        out.append(f"최근 30일 자금 {d['change_30d']:+.0f}% 유입")
+        out.append(f"한 달 새 맡겨진 돈 {d['change_30d']:+.0f}% 증가")
     if d.get("listed_at") and now and now.timestamp() - d["listed_at"] < 120 * 86400:
-        out.append("등록 4개월 이내의 초기 파밍 구간")
+        out.append("시작한 지 4개월이 안 된 초기 단계")
     if (detail or {}).get("audits"):
-        out.append("보안 감사 이력 있음")
+        out.append("외부 보안 점검을 받은 기록 있음")
     hot = [c for c in d.get("chains", []) if c in set(hot_chains)]
     if hot:
-        out.append(f"지금 뜨거운 체인({', '.join(hot[:2])}) 위에서 운영")
+        out.append(f"요즘 인기 있는 블록체인({', '.join(fr.chain(c) for c in hot[:2])}) 위에서 운영")
     if d.get("mentions"):
-        out.append(f"커뮤니티·매체에서 에어드랍 이야기 {d['mentions']}건")
+        out.append(f"커뮤니티·언론에서 에어드랍 이야기 {d['mentions']}건")
     if d.get("watch"):
-        out.append("디젠들이 오래 주목해 온 대형 프리토큰 프로젝트")
+        out.append("코인 투자자들이 오래 주목해 온 대형 프로젝트")
     return out[:4]
 
 
