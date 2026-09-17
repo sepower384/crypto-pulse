@@ -323,6 +323,52 @@ def airdrop_pick(tokenless, posts, cfg, now, shown=None):
     return [c for _, c in cands[:acfg.get("max_items", 5)]]
 
 
+AIRDROP_SHARE = (0.03, 0.06, 0.10)  # 보수·중간·낙관: 전체 물량 중 예치자 몫(통상 3~10%)
+
+
+def airdrop_estimate(d, ratios, deposit=1000):
+    """에어드랍 예상 가치(예치금 deposit 달러 기준).
+    가정: 토큰 시총 ≈ 예치금 × (같은 분야 토큰들의 시총/예치금 배수), 그중 3~10%를 예치금 비율대로 나눠 받는다.
+    → 받는 가치 = deposit × 배수 × 비중. 배수는 분야 분포의 25%·50%·75% 지점을 보수·중간·낙관에 맞춘다."""
+    r, basis = (ratios or {}).get(d.get("category")), d.get("category")
+    if not r or r.get("n", 0) < 5:
+        r, basis = (ratios or {}).get("_all"), "전체 디파이"
+    if not r:
+        return None
+    low, mid, high = (deposit * r[k] * sh for k, sh in zip(("p25", "p50", "p75"), AIRDROP_SHARE))
+    return {"deposit": deposit, "low": low, "mid": mid, "high": high, "ratio": r["p50"], "basis": basis,
+            "n": r["n"], "mid_pct": r["p50"] * AIRDROP_SHARE[1] * 100}
+
+
+def airdrop_reasons(d, detail, hot_chains=(), now=None):
+    """'괜찮은 이유' — 데이터로 확인되는 것만, 최대 4개."""
+    out = []
+    raises = (detail or {}).get("raises") or []
+    if raises:
+        vcs = list(dict.fromkeys(v for r in raises for v in r["lead"] + r["others"]))
+        total = detail.get("total_raised") or 0
+        head = f"투자 유치 ${total:,.1f}M" if total else "투자 유치"
+        out.append(head + (f"({', '.join(vcs[:3])}{' 등' if len(vcs) > 3 else ''})" if vcs else ""))
+    if (d.get("tvl") or 0) >= 1e8:
+        out.append("예치금 1억 달러 이상으로 이미 큰돈이 들어와 있음")
+    if (d.get("change_7d") or 0) >= 15:
+        out.append(f"최근 7일 자금 {d['change_7d']:+.0f}% 유입 중")
+    elif (d.get("change_30d") or 0) >= 50:
+        out.append(f"최근 30일 자금 {d['change_30d']:+.0f}% 유입")
+    if d.get("listed_at") and now and now.timestamp() - d["listed_at"] < 120 * 86400:
+        out.append("등록 4개월 이내의 초기 파밍 구간")
+    if (detail or {}).get("audits"):
+        out.append("보안 감사 이력 있음")
+    hot = [c for c in d.get("chains", []) if c in set(hot_chains)]
+    if hot:
+        out.append(f"지금 뜨거운 체인({', '.join(hot[:2])}) 위에서 운영")
+    if d.get("mentions"):
+        out.append(f"커뮤니티·매체에서 에어드랍 이야기 {d['mentions']}건")
+    if d.get("watch"):
+        out.append("디젠들이 오래 주목해 온 대형 프리토큰 프로젝트")
+    return out[:4]
+
+
 def airdrop_guides(guides, now, max_days=21, limit=2):
     out = []
     for g in guides or []:

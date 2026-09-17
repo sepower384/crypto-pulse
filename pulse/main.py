@@ -9,6 +9,7 @@ import argparse
 import html
 import json
 import os
+import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -259,12 +260,19 @@ def build_message(cfg, results, st, now):
     # 에어드랍 파밍
     if drops or guides:
         doc.append({"kind": "divider"})
-        a_lines = [airdrop_line(d, g) for d in drops]
+        ratios = _extra(by_name, "onchain", "category_ratio", {})
+        hot_chains = [n for n, _ in alpha.chain_heat(pools)[:4]] + [c["name"] for c in new_chains]
+        for d in drops:
+            d["detail"] = onchain.protocol_detail(d["slug"])
+            d["reasons"] = alpha.airdrop_reasons(d, d["detail"], hot_chains, now)
+            d["estimate"] = alpha.airdrop_estimate(d, ratios)
+        a_lines = [airdrop_line(i, d, g) for i, d in enumerate(drops, 1)]
         for gd in guides:
             a_lines.append(f"📚 파밍 가이드: {slack.link(gd['url'], ' '.join(to_korean(gd['title'], 200).split())[:90])}"
                            " _(airdrops.io)_")
-        a_lines.append("_토큰이 아직 없는데 돈이 몰리는 곳을 골랐습니다. 에어드랍은 확정이 아니고, "
-                       "예치 전 공식 링크·컨트랙트 확인은 필수입니다._")
+        a_lines.append("_토큰이 아직 없는데 돈이 몰리는 곳을 골랐습니다. 예상 금액은 비슷한 토큰들의 가격 수준으로 낸 "
+                       "추정일 뿐이고 에어드랍 자체도 확정이 아닙니다. 예치에는 해킹·손실 위험이 있으니 "
+                       "공식 링크와 컨트랙트를 꼭 확인하시는 것이 좋습니다._")
         doc.append({"kind": "section", "title": "🪂 에어드랍 파밍 레이더 — 토큰 없는데 돈 몰리는 곳", "lines": a_lines})
 
     # 국내 거래소 공지·속보
@@ -387,26 +395,47 @@ def chain_line(c, posts, g):
     return line
 
 
-def airdrop_line(d, g):
-    bits = [slack.esc(d["category"]), f"{g.explain('TVL')} {usd(d['tvl'])}"]
-    if d.get("change_7d") is not None:
-        bits.append(f"7일 *{pct(d['change_7d'])}*")
-    if d.get("change_30d") is not None:
-        bits.append(f"30일 {pct(d['change_30d'])}")
-    if d.get("chains"):
-        bits.append("체인 " + "·".join(slack.esc(c) for c in d["chains"][:3]))
-    links = []
-    if d.get("url"):
-        links.append(slack.link(d["url"], "공식"))
+CATEGORY_KR = {"Dexs": "탈중앙 거래소", "Lending": "대출", "Yield": "이자 수익", "Yield Aggregator": "수익 자동화",
+               "Farm": "파밍", "Derivatives": "선물·파생 거래소", "Perps": "무기한 선물", "Prediction Market": "예측시장",
+               "Restaking": "리스테이킹", "Liquid Restaking": "유동 리스테이킹", "Collateral Markets": "담보 마켓",
+               "Basis Trading": "베이시스 트레이딩", "CDP": "담보 스테이블코인", "Options Vault": "옵션 볼트",
+               "Leveraged Farming": "레버리지 파밍", "Restaked BTC": "비트코인 리스테이킹", "Launchpad": "런치패드",
+               "NFT Marketplace": "NFT 거래소", "Decentralized AI": "탈중앙 AI", "Liquidity Manager": "유동성 관리",
+               "Options": "옵션 거래소", "Insurance": "보험", "Indexes": "인덱스", "Synthetics": "합성자산",
+               "CDP Manager": "담보대출 관리", "Governance Incentives": "거버넌스 보상", "OTC Marketplace": "장외 거래"}
+
+
+def airdrop_line(i, d, g):
+    """에어드랍 후보 1건: 프로젝트 / 체인 / 분야 / 무엇 / 괜찮은 이유 / 에어드랍 시 예상 / 자료."""
+    det = d.get("detail") or {}
+    cat = CATEGORY_KR.get(d["category"], d["category"])
+    flow = [f"{k} {pct(d[f])}" for k, f in (("7일", "change_7d"), ("30일", "change_30d")) if d.get(f) is not None]
+    out = [f"🪂 *{i}. {slack.esc(d['name'])}*" + (" ⭐" if d.get("watch") else ""),
+           f"      • 체인: {slack.esc(' · '.join(d.get('chains') or ['?']))}",
+           f"      • 분야: {slack.esc(cat)} · {g.explain('TVL')} {usd(d['tvl'])}" + (f" ({', '.join(flow)})" if flow else "")]
+    if det.get("description"):
+        first = re.split(r"(?<=[.!?])\s+", det["description"].strip())[0]  # 첫 문장만 → 중간에서 잘리지 않게
+        desc = " ".join(to_korean(first, 300).split())
+        if len(desc) > 160:
+            desc = desc[:158].rstrip() + "…"
+        out.append(f"      • 무엇: {slack.esc(g.explain(desc))}")
+    if d.get("reasons"):
+        out.append("      • 괜찮은 이유: " + slack.esc(" / ".join(d["reasons"])))
+    est = d.get("estimate")
+    if est:
+        out.append(f"      • 에어드랍 시 예상: ${est['deposit']:,} 예치 → 약 *${est['mid']:,.0f}* (예치금의 {est['mid_pct']:.1f}%) "
+                   f"· 보수 ${est['low']:,.0f} ~ 낙관 ${est['high']:,.0f}")
+        out.append(f"        _계산: {slack.esc(CATEGORY_KR.get(est['basis'], est['basis']))} 분야 토큰 {est['n']}개의 "
+                   f"시총/예치금 배수(중간 {est['ratio']:.2f}배) × 에어드랍 물량 3~10%를 예치금 비율대로 받는다고 가정_")
+    links = [slack.link(d["url"], "공식")] if d.get("url") else []
     links.append(slack.link(f"https://defillama.com/protocol/{d['slug']}", "디파이라마"))
-    if d.get("twitter"):
-        links.append(slack.link(f"https://x.com/{d['twitter']}", "X"))
-    tag = " ⭐ _디젠 관심 목록_" if d.get("watch") else ""
-    line = f"🪂 *{slack.esc(d['name'])}*{tag} — " + " · ".join(bits) + "\n      자료: " + " · ".join(links)
-    if d.get("mentions"):
-        line += f"\n      화제: 에어드랍·포인트 이야기 {d['mentions']}건 — " + " / ".join(
-            slack.link(p.url, _head(p, 60)) for p in d["hits"])
-    return line
+    tw = d.get("twitter") or det.get("twitter")
+    if tw:
+        links.append(slack.link(f"https://x.com/{tw}", "X"))
+    out.append("      • 자료: " + " · ".join(links))
+    if d.get("hits"):
+        out.append("      • 화제: " + " / ".join(slack.link(p.url, _head(p, 60)) for p in d["hits"]))
+    return "\n".join(out) + "\n"
 
 
 def degen_line(t, fresh, g):

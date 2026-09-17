@@ -144,6 +144,40 @@ def parse_tokenless(data, min_tvl=10_000_000):
     return list(merged.values())
 
 
+def category_ratios(data, min_tvl=1_000_000):
+    """토큰이 있는 프로토콜의 분야별 시총/예치금 배수 분포 → 에어드랍 가치 추정의 비교 기준.
+    극단값(예측시장 397배 등)은 0.02~5배로 자른다. 표본 5개 미만 분야는 전체('_all') 분포를 쓴다."""
+    groups = {}
+    for p in (data or {}).get("protocols", []):
+        mcap, tvl = _f(p.get("mcap")), _f(p.get("tvl")) or 0
+        if p.get("symbol") in (None, "", "-") or not mcap or tvl < min_tvl:
+            continue
+        r = min(max(mcap / tvl, 0.02), 5.0)
+        groups.setdefault(p.get("category") or "", []).append(r)
+        groups.setdefault("_all", []).append(r)
+    out = {}
+    for cat, v in groups.items():
+        v.sort()
+        pick = [round(v[min(int(len(v) * q), len(v) - 1)], 3) for q in (0.25, 0.5, 0.75)]
+        out[cat] = {"p25": pick[0], "p50": pick[1], "p75": pick[2], "n": len(v)}
+    return out
+
+
+def protocol_detail(slug):
+    """디파이라마 프로토콜 상세: 설명·투자 라운드·감사 여부. 실패하면 {}."""
+    try:
+        d = fetch_json(f"https://api.llama.fi/updatedProtocol/{slug}", retries=1, timeout=30)
+    except Exception:  # noqa: BLE001
+        return {}
+    raises = [{"round": r.get("round") or "", "amount": _f(r.get("amount")),
+               "lead": r.get("leadInvestors") or [], "others": r.get("otherInvestors") or [],
+               "date": r.get("date")} for r in d.get("raises") or []]
+    raises.sort(key=lambda r: r["date"] or 0, reverse=True)
+    return {"description": (d.get("description") or "").strip(), "raises": raises,
+            "audits": _f(d.get("audits")) or 0, "twitter": d.get("twitter") or "",
+            "total_raised": sum(r["amount"] or 0 for r in raises)}
+
+
 def network_pools(network_id, limit=3):
     """새 체인 자료용: 그 체인의 상위 풀 몇 개 (이름·24h 거래대금). 실패하면 []."""
     try:
@@ -198,8 +232,9 @@ def collect(cfg):
     acfg = cfg.get("airdrop", {})
     if acfg.get("enabled", True):
         try:
-            extra["tokenless"] = parse_tokenless(fetch_json(LLAMA_PROTOCOLS, retries=1, timeout=90),
-                                                 acfg.get("min_tvl_usd", 10_000_000))
+            protocols = fetch_json(LLAMA_PROTOCOLS, retries=1, timeout=90)
+            extra["tokenless"] = parse_tokenless(protocols, acfg.get("min_tvl_usd", 10_000_000))
+            extra["category_ratio"] = category_ratios(protocols)
             notes.append(f"토큰없는 프로토콜 {len(extra['tokenless'])}")
         except Exception as e:  # noqa: BLE001
             fails.append(f"디파이라마 프로토콜({type(e).__name__})")

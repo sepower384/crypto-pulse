@@ -209,6 +209,28 @@ class TestPicks(unittest.TestCase):
         self.assertTrue(poly["watch"])
         self.assertEqual(poly["mentions"], 0)
 
+    def test_airdrop_estimate_and_reasons(self):
+        data = {"protocols": [{"name": f"D{i}", "symbol": f"D{i}", "category": "Dexs", "tvl": 1e7, "mcap": 1e7 * r}
+                              for i, r in enumerate([0.2, 0.5, 1.0, 1.5, 2.0, 999])]
+                + [{"name": "L", "symbol": "L", "category": "Lending", "tvl": 1e7, "mcap": 1e6}]}
+        ratios = onchain.category_ratios(data)
+        self.assertEqual(ratios["Dexs"]["n"], 6)
+        self.assertEqual(ratios["Dexs"]["p75"], 2.0)
+        self.assertLessEqual(ratios["_all"]["p75"], 5.0)  # 극단값(999배)은 5배로 잘림
+        est = alpha.airdrop_estimate({"category": "Dexs"}, ratios)
+        self.assertEqual(est["basis"], "Dexs")
+        self.assertAlmostEqual(est["mid"], 1000 * ratios["Dexs"]["p50"] * 0.06)
+        self.assertLess(est["low"], est["mid"])
+        self.assertLess(est["mid"], est["high"])
+        self.assertEqual(alpha.airdrop_estimate({"category": "Lending"}, ratios)["basis"], "전체 디파이")
+        self.assertIsNone(alpha.airdrop_estimate({"category": "X"}, {}))
+        d = {"tvl": 2e8, "change_7d": 30.0, "chains": ["Arc"], "mentions": 2, "watch": False,
+             "listed_at": NOW.timestamp() - 86400}
+        det = {"raises": [{"lead": ["Paradigm"], "others": ["A", "B", "C"]}], "total_raised": 12.0, "audits": 1}
+        r = alpha.airdrop_reasons(d, det, ["Arc"], NOW)
+        self.assertEqual(len(r), 4)
+        self.assertEqual(r[0], "투자 유치 $12.0M(Paradigm, A, B 등)")
+
     def test_tokenless_parse(self):
         data = {"parentProtocols": [{"id": "parent#tok", "name": "Tok", "symbol": "TOK"},
                                     {"id": "parent#free", "name": "Free", "symbol": "-", "twitter": "free"}],
@@ -255,12 +277,17 @@ class TestPipelineAlpha(TestPipeline):
                 "gt_networks": [{"id": "eth", "name": "Ethereum", "cg_platform": None}],
                 "tokenless": [{"name": "Zeta Farm", "product": "Zeta", "category": "Dexs", "chains": ["Base"],
                                "tvl": 5e7, "change_7d": 40.0, "change_30d": 80.0, "listed_at": None,
-                               "url": "https://zeta.example", "twitter": "zeta", "slug": "zeta-farm"}]}),
+                               "url": "https://zeta.example", "twitter": "zeta", "slug": "zeta-farm"}],
+                "category_ratio": {"Dexs": {"p25": 0.2, "p50": 0.8, "p75": 1.5, "n": 9}}}),
         ]
 
     def setUp(self):
         super().setUp()
         mock.patch("pulse.sources.onchain.network_pools", return_value=[]).start()
+        mock.patch("pulse.sources.onchain.protocol_detail", return_value={
+            "description": "Zeta is a DEX", "raises": [{"round": "Seed", "amount": 5.0, "lead": ["Paradigm"],
+                                                       "others": [], "date": 1}],
+            "audits": 1, "twitter": "zeta", "total_raised": 5.0}).start()
 
     def st(self):
         return {"seen": {}, "mentions": [], "trending_prev": ["BTC"],
@@ -281,7 +308,11 @@ class TestPipelineAlpha(TestPipeline):
         self.assertIn("호재 5 · 악재 1", text)
         self.assertIn("국내 커뮤니티 핫글", text)
         self.assertIn("🪂 에어드랍 파밍 레이더", text)
-        self.assertIn("*Zeta Farm*", text)
+        self.assertIn("*1. Zeta Farm*", text)
+        self.assertIn("• 체인: Base", text)
+        self.assertIn("• 분야: 탈중앙 거래소", text)
+        self.assertIn("투자 유치 $5.0M(Paradigm)", text)
+        self.assertIn("• 에어드랍 시 예상: $1,000 예치 → 약 *$48* (예치금의 4.8%) · 보수 $6 ~ 낙관 $150", text)
         self.assertIn("국내 커뮤니티에서 많이 나온 코인", text)
         self.assertEqual([c["name"] for c in msg["new_chains"]], ["Megachain"])
         self.assertIn("llama:Megachain", msg["chain_updates"])
