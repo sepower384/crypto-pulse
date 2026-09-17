@@ -116,6 +116,8 @@ def spread(rows, min_pct=1.5, max_pct=20.0):
         return None
     lo = min(cands, key=lambda t: t["usd"])
     hi = max(cands, key=lambda t: t["usd"])
+    if market_label(lo) == market_label(hi):  # 같은 거래소 안의 풀끼리 차이는 차익거래 안내로 부적절
+        return None
     pct = (hi["usd"] / lo["usd"] - 1) * 100
     if pct < min_pct or pct > max_pct:
         return None
@@ -128,7 +130,10 @@ def market_label(t):
     if t["id"] in GLOBAL_EXCHANGES:
         return GLOBAL_EXCHANGES[t["id"]]
     if _is_dex(t):
-        return dex_name(t["market"])
+        ver = re.search(r"\b[Vv](\d)\b", t["market"])
+        chain_m = re.search(r"\(([^)]+)\)$", t["market"])
+        return (dex_name(t["market"]) + (f" V{ver.group(1)}" if ver else "")
+                + (f"({fr.chain(chain_m.group(1))})" if chain_m else ""))
     return t["market"]
 
 

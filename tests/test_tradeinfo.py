@@ -35,7 +35,10 @@ class TestTradeInfo(unittest.TestCase):
         sp = tradeinfo.spread(ROWS)
         self.assertAlmostEqual(sp["pct"], 2.0)
         self.assertEqual(sp["low"]["id"], "binance")
-        self.assertEqual(tradeinfo.market_label(sp["high"]), "유니스왑")
+        self.assertEqual(tradeinfo.market_label(sp["high"]), "유니스왑 V3(이더리움)")
+        same = [tk("Uniswap V3 (Robinhood)", "u3", 1.0, target="0X" + "A" * 40),
+                tk("Uniswap V3 (Robinhood)", "u3b", 1.05, target="0X" + "B" * 40)]
+        self.assertIsNone(tradeinfo.spread(same))
         self.assertIsNone(tradeinfo.spread(ROWS[:1]))
 
     def test_futures_and_lines(self):
@@ -55,7 +58,7 @@ class TestTradeInfo(unittest.TestCase):
         self.assertIn("선물 매매(오를 때·내릴 때 모두 가능): 바이낸스 · 바이비트", txt)
         self.assertIn("오른다에 건 쪽이 수수료를 내는 중", txt)
         self.assertIn("에어드랍 작업: 이미 코인이 나와 해당 없음", txt)
-        self.assertIn("거래소 간 가격 차이 *2.0%*: 바이낸스 100달러 → 유니스왑 102달러", txt)
+        self.assertIn("거래소 간 가격 차이 *2.0%*: 바이낸스 100달러 → 유니스왑 V3(이더리움) 102달러", txt)
         no_kr, _ = tradeinfo.lines_for("ZEC", ROWS[:1], {})
         self.assertIn("국내 거래소: 아직 없음", "\n".join(no_kr))
 
