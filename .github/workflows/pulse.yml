@@ -15,6 +15,10 @@ on:
         description: "새 소식 없어도 전송"
         type: boolean
         default: false
+      mode:
+        description: "run(기본) / chats(봇이 들어간 방 조회, 전송 없음)"
+        type: string
+        default: run
 
 concurrency:
   group: crypto-pulse
@@ -48,6 +52,7 @@ jobs:
           TELEGRAM_BOT_TOKEN_PULSE: ${{ secrets.TELEGRAM_BOT_TOKEN_PULSE }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID_PULSE: ${{ secrets.TELEGRAM_CHAT_ID_PULSE }}
           TELEGRAM_TOPIC_PULSE: ${{ secrets.TELEGRAM_TOPIC_PULSE }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PYTHONUTF8: "1"
@@ -59,7 +64,9 @@ jobs:
             echo "::error::저장소 Secrets 에 SLACK_WEBHOOK_URL 도, 텔레그램(TELEGRAM_BOT_TOKEN_PULSE 또는 TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID)도 없다"
             exit 1
           fi
-          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+          if [ "${{ github.event.inputs.mode }}" = "chats" ]; then
+            python -m pulse.main --chats
+          elif [ "${{ github.event.inputs.force }}" = "true" ]; then
             python -m pulse.main --force
           else
             python -m pulse.main

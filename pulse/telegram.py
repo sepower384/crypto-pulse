@@ -19,6 +19,7 @@ import re
 import ssl
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 API = "https://api.telegram.org/bot{token}/{method}"
@@ -61,7 +62,8 @@ def config(env=None):
     """전용 토큰(TELEGRAM_BOT_TOKEN_PULSE) → 공용 토큰(TELEGRAM_BOT_TOKEN) 순. 없으면 None."""
     env = os.environ if env is None else env
     token = (env.get("TELEGRAM_BOT_TOKEN_PULSE") or "").strip() or (env.get("TELEGRAM_BOT_TOKEN") or "").strip()
-    chat = (env.get("TELEGRAM_CHAT_ID") or "").strip()
+    # 크립토마스 전용 방(TELEGRAM_CHAT_ID_PULSE)이 있으면 공용 방 대신 쓴다
+    chat = (env.get("TELEGRAM_CHAT_ID_PULSE") or "").strip() or (env.get("TELEGRAM_CHAT_ID") or "").strip()
     if not token or not chat:
         return None
     topic = (env.get("TELEGRAM_TOPIC_PULSE") or "").strip()
@@ -308,3 +310,44 @@ def send_briefing(messages, photo=None, cfg=None, sleep=time.sleep):
             notes.append(f"본문 {i + 1}/{len(messages)} 실패: {d}")
     return {"configured": True, "ok": sent > 0, "sent": sent, "total": len(messages),
             "detail": f"본문 {sent}/{len(messages)}" + (" · " + " · ".join(notes) if notes else "")}
+
+
+# ---------------------------------------------------------------- 방 조회
+def _get(token, method, params=None):
+    q = ("?" + urllib.parse.urlencode(params)) if params else ""
+    req = urllib.request.Request(API.format(token=token, method=method) + q)
+    with _urlopen(req, timeout=20, context=ssl.create_default_context()) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def list_chats(env=None):
+    """봇이 들어가 있는 방(최근 기록 기준)과 지금 보내는 방. 토큰은 결과에 싣지 않는다."""
+    env = os.environ if env is None else env
+    cfg = config(env)
+    token = (env.get("TELEGRAM_BOT_TOKEN_PULSE") or "").strip() or (env.get("TELEGRAM_BOT_TOKEN") or "").strip()
+    if not token:
+        return {"error": "봇 토큰 없음"}
+    out = {"token_source": cfg["token_source"] if cfg else "", "current": None, "chats": {}}
+    try:
+        me = _get(token, "getMe").get("result", {})
+        out["bot"] = f"{me.get('first_name')} (@{me.get('username')})"
+        if cfg:
+            c = _get(token, "getChat", {"chat_id": cfg["chat_id"]}).get("result", {})
+            out["current"] = {"id": cfg["chat_id"], "type": c.get("type"),
+                              "title": c.get("title") or c.get("first_name") or c.get("username"),
+                              "via": "TELEGRAM_CHAT_ID_PULSE" if (env.get("TELEGRAM_CHAT_ID_PULSE") or "").strip()
+                              else "TELEGRAM_CHAT_ID"}
+        data = _get(token, "getUpdates", {"allowed_updates": '["message","channel_post","my_chat_member"]'})
+    except Exception as e:  # noqa: BLE001
+        out["error"] = f"{type(e).__name__}: {str(e).replace(token, '***')[:150]}"
+        return out
+    for u in data.get("result", []):
+        for k in ("my_chat_member", "channel_post", "message"):
+            if k in u:
+                c = u[k]["chat"]
+                st = (u[k].get("new_chat_member") or {}).get("status")
+                prev = out["chats"].get(str(c["id"]), {})
+                out["chats"][str(c["id"])] = {"type": c.get("type"),
+                                              "title": c.get("title") or c.get("username") or c.get("first_name"),
+                                              "status": st or prev.get("status", "")}
+    return out

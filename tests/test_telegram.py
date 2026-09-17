@@ -21,7 +21,8 @@ from pulse import chart, main, state, wording  # noqa: E402
 from pulse import telegram as tg  # noqa: E402
 from test_pulse import NOW, TestPipeline, cfg  # noqa: E402
 
-TG_ENV_KEYS = ("TELEGRAM_BOT_TOKEN_PULSE", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_TOPIC_PULSE")
+TG_ENV_KEYS = ("TELEGRAM_BOT_TOKEN_PULSE", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_CHAT_ID_PULSE",
+               "TELEGRAM_TOPIC_PULSE")
 SPEC_CODES = ["globe_with_meridians", "fire", "satellite_antenna", "space_invader", "butterfly", "heart", "eye",
               "white_check_mark", "double_vertical_bar"]
 

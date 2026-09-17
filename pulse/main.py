@@ -657,11 +657,16 @@ def main(argv=None):
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--preview-telegram", action="store_true", help="전송·state 저장 없이 미리보기 파일만 만든다")
+    ap.add_argument("--chats", action="store_true", help="텔레그램 봇이 들어간 방과 지금 보내는 방을 보여 준다")
     a = ap.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     if a.preview_telegram:
         return preview()
+    if a.chats:
+        load_dotenv()
+        print(json.dumps(tgsend.list_chats(), ensure_ascii=False, indent=1))
+        return 0
     return run(dry_run=a.dry_run, force=a.force)
 
 
